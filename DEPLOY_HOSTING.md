@@ -81,12 +81,15 @@ Muvaffaqiyatли bo'lsa: admin va operator foydalanuvchilari + namunaviy hujjat 
 
 ## 4. Ilovani ishga tushirish
 
-### a) Panel orqali (tavsiya etiladi)
-ISPmanager'да **Node.js ilovasi** sozlamalarida:
-- **Ilova papkasi:** loyiha papkasi (`.../narx.namresort.uz`)
-- **Ishga tushirish buyrug'i:** `npm start`  (bu `next start` ni ishlatadi)
-- **Port:** panel bergan portni ishlatadi (Next.js `PORT` muhit o'zgaruvchisini avtomatik oladi).
-- Muhit o'zgaruvchilari: `.env` fayl o'qiladi (yoki panel maydonlariga ham qo'shishingiz mumkin).
+### a) Panel orqali (ISPmanager — tavsiya etiladi)
+- **Ishga tushirish buyrug'i (Команда запуска):** `node server.js`
+  - Loyihada `server.js` bor — u panel bergan **PORT** da ishlaydi (3000 emas), shuning uchun
+    "EADDRINUSE :::3000" xatosi chiqmaydi.
+- **Ishga tushirishdan oldingi buyruq (Дополнительная команда):**
+  `npm install --include=dev && npm run build && npm run prisma:push && npm run seed`
+  (`seed` skripti endi mavjud; xohlasangiz `npm run deploy:db` bir o'zi push+seed qiladi.)
+- **Muhit o'zgaruvchilari** — `.env` fayl o'qiladi (yoki panelга `DATABASE_URL`, `JWT_SECRET`,
+  `NODE_ENV=production`, seed parollarини qo'shing). `PORT` ni panel avtomatik beradi.
 
 Panel domenni (`narx.namresort.uz`) va **SSL (HTTPS)** ni o'zi ulaydi (reverse proxy).
 
