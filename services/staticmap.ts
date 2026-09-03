@@ -55,12 +55,12 @@ export async function generateStaticMap(
   const StaticMaps = mod.default || mod;
 
   const renderWith = async (tileUrl: string): Promise<Buffer> => {
-    // Yuqori sifat uchun katta o'lcham (2:1), sahifaga to'liq joylashadi.
+    // Yuqori sifat, 3:2 nisbat — A4 sahifasiga muvozanatli va to'liq joylashadi.
     const map = new StaticMaps({
-      width: 1600,
-      height: 800,
-      paddingX: 40,
-      paddingY: 40,
+      width: 1500,
+      height: 1000,
+      paddingX: 30,
+      paddingY: 30,
       tileUrl,
       tileSize: 256,
       tileRequestHeader: {

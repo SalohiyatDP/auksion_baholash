@@ -241,8 +241,8 @@ function buildMapSection(d: DocxData, tr: Tr, map?: MapImage): Paragraph[] {
   );
 
   if (map && map.buffer && map.buffer.length > 0) {
-    const size = getImageSize(map.buffer) ?? { width: 1600, height: 800 };
-    const maxW = 640; // A4 sahifa foydali kengligiga to'liq joylashadi
+    const size = getImageSize(map.buffer) ?? { width: 1500, height: 1000 };
+    const maxW = 648; // A4 sahifa foydali kengligiga to'liq joylashadi (~17 sm)
     const scale = size.width > maxW ? maxW / size.width : 1;
     const imageOptions = {
       type: map.mime.includes("png") ? "png" : "jpg",
