@@ -42,10 +42,17 @@ function collectRings(geojsonStr?: string | null): Ring[] {
  * tileType — foydalanuvchi tanlagan qatlam (Google sun'iy yo'ldosh, Esri, va h.k.).
  * Tanlangan qatlam ishlamasa — Esri ga qaytadi (rasm baribir chiqadi).
  */
+export interface MapView {
+  lat: number;
+  lng: number;
+  zoom: number;
+}
+
 export async function generateStaticMap(
   totalGeoJson?: string | null,
   lotGeoJson?: string | null,
-  tileType: MapTileType = "google_satellite"
+  tileType: MapTileType = "google_satellite",
+  view?: MapView | null
 ): Promise<StaticMapResult | null> {
   const totalRings = collectRings(totalGeoJson);
   const lotRings = collectRings(lotGeoJson);
@@ -85,7 +92,12 @@ export async function generateStaticMap(
     addRings(totalRings, RED_STROKE, RED_FILL);
     addRings(lotRings, BLUE_STROKE, BLUE_FILL);
 
-    await map.render(); // markaz/zoom qo'shilgan poligonlarga avtomatik moslashadi
+    if (view && Number.isFinite(view.lat) && Number.isFinite(view.lng) && Number.isFinite(view.zoom)) {
+      // Preview'dan saqlangan markaz va masshtab (staticmaps: [lon, lat], integer zoom)
+      await map.render([view.lng, view.lat], Math.round(view.zoom));
+    } else {
+      await map.render(); // markaz/zoom poligonlarga avtomatik moslashadi
+    }
     return map.image.buffer("image/png");
   };
 

@@ -223,6 +223,11 @@ model Document {
   // Xarita qatlami turi: google_satellite | google_hybrid | google_streets | esri | osm
   mapTileType    String         @default("google_satellite")
 
+  // Xarita ko'rinishi (preview'dan saqlangan markaz va masshtab)
+  mapCenterLat   Float?
+  mapCenterLng   Float?
+  mapZoom        Float?
+
   status         DocumentStatus @default(DRAFT)
 
   createdById    String

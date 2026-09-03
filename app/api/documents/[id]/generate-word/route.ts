@@ -22,10 +22,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     // Xarita: avval SHP/KMZ geometriyasidan Google Static Map, aks holda yuklangan rasm
     let map: MapImage | undefined;
+    const view =
+      doc.mapZoom != null && doc.mapCenterLat != null && doc.mapCenterLng != null
+        ? { lat: doc.mapCenterLat, lng: doc.mapCenterLng, zoom: doc.mapZoom }
+        : null;
     const staticMap = await generateStaticMap(
       doc.totalGeoJson,
       doc.lotGeoJson,
-      doc.mapTileType as any
+      doc.mapTileType as any,
+      view
     );
     if (staticMap) {
       map = staticMap;

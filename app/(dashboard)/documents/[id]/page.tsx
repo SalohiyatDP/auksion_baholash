@@ -57,6 +57,9 @@ export default async function DocumentViewPage({
     scriptMode: doc.scriptMode as "LATIN" | "CYRILLIC" | "BOTH",
     fontFamily: doc.fontFamily,
     mapTileType: doc.mapTileType,
+    mapCenterLat: doc.mapCenterLat,
+    mapCenterLng: doc.mapCenterLng,
+    mapZoom: doc.mapZoom,
     totalGeoJson: doc.totalGeoJson,
     lotGeoJson: doc.lotGeoJson,
   };

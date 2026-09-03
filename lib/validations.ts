@@ -28,6 +28,9 @@ export const documentInputSchema = z.object({
     .enum(["google_satellite", "google_hybrid", "google_streets", "esri", "osm"])
     .optional()
     .default("google_satellite"),
+  mapCenterLat: z.number().nullable().optional(),
+  mapCenterLng: z.number().nullable().optional(),
+  mapZoom: z.number().nullable().optional(),
   totalGeoJson: z.string().optional().nullable(),
   lotGeoJson: z.string().optional().nullable(),
   status: z.enum(["DRAFT", "GENERATED"]).optional().default("DRAFT"),

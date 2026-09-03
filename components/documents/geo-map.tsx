@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, GeoJSON, LayersControl, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, LayersControl, useMap, useMapEvents } from "react-leaflet";
 import { MapPin } from "lucide-react";
 import { extractRings } from "@/lib/geo/geojson";
 
@@ -12,6 +12,20 @@ interface GeoMapProps {
   lotGeoJson?: string | null;
   height?: number;
   tileType?: string;
+  center?: [number, number] | null; // [lat, lng]
+  zoom?: number | null;
+  onViewChange?: (center: [number, number], zoom: number) => void;
+}
+
+// Foydalanuvchi xaritani surganda/masshtablaganda joriy ko'rinishni (markaz+zoom) ushlaydi
+function ViewCapture({ onViewChange }: { onViewChange: (c: [number, number], z: number) => void }) {
+  const map = useMapEvents({
+    moveend() {
+      const c = map.getCenter();
+      onViewChange([c.lat, c.lng], map.getZoom());
+    },
+  });
+  return null;
 }
 
 const RED = "#D32F2F";
@@ -46,13 +60,13 @@ function FitBounds({ total, lot }: { total: any; lot: any }) {
   return null;
 }
 
-export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite" }: GeoMapProps) {
+export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite", center = null, zoom = null, onViewChange }: GeoMapProps) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
   const isChecked = (t: string) => tileType === t;
 
-  const total = parse(totalGeoJson);
-  const lot = parse(lotGeoJson);
+  const total = React.useMemo(() => parse(totalGeoJson), [totalGeoJson]);
+  const lot = React.useMemo(() => parse(lotGeoJson), [lotGeoJson]);
 
   if (!total && !lot) {
     return (
@@ -70,7 +84,7 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
   return (
     <div>
       <div className="overflow-hidden rounded-lg border">
-        <MapContainer key={tileType} center={[41.0, 71.6]} zoom={12} style={{ height, width: "100%" }} scrollWheelZoom>
+        <MapContainer key={tileType} center={center ?? [41.0, 71.6]} zoom={zoom ?? 12} style={{ height, width: "100%" }} scrollWheelZoom>
           <LayersControl position="topright">
             <LayersControl.BaseLayer checked={isChecked("osm")} name="Ko'cha xaritasi">
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
@@ -108,13 +122,16 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
           </LayersControl>
 
           {total && (
-            <GeoJSON data={total} style={{ color: RED, weight: 3, fillColor: RED, fillOpacity: 0.12 }} />
+            <GeoJSON key={`t-${totalGeoJson?.length ?? 0}`} data={total} style={{ color: RED, weight: 3, fillColor: RED, fillOpacity: 0.12 }} />
           )}
           {lot && (
-            <GeoJSON data={lot} style={{ color: BLUE, weight: 3, fillColor: BLUE, fillOpacity: 0.15 }} />
+            <GeoJSON key={`l-${lotGeoJson?.length ?? 0}`} data={lot} style={{ color: BLUE, weight: 3, fillColor: BLUE, fillOpacity: 0.15 }} />
           )}
 
-          <FitBounds total={total} lot={lot} />
+          {/* Saqlangan ko'rinish bo'lmasa — poligonlarga moslaymiz */}
+          {zoom == null && <FitBounds total={total} lot={lot} />}
+          {/* Interaktiv rejimda ko'rinishni ushlaymiz */}
+          {onViewChange && <ViewCapture onViewChange={onViewChange} />}
         </MapContainer>
       </div>
       <div className="mt-2 flex gap-4 text-xs text-slate-500">

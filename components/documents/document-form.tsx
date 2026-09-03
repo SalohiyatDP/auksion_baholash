@@ -38,6 +38,9 @@ export interface DocumentFormInitial {
   scriptMode?: string;
   fontFamily?: string;
   mapTileType?: string;
+  mapCenterLat?: number | null;
+  mapCenterLng?: number | null;
+  mapZoom?: number | null;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
@@ -102,6 +105,13 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
   const [scriptMode, setScriptMode] = React.useState<ScriptMode>((initial?.scriptMode as ScriptMode) ?? "LATIN");
   const [fontFamily, setFontFamily] = React.useState(initial?.fontFamily ?? "Times New Roman");
   const [mapTileType, setMapTileType] = React.useState(initial?.mapTileType ?? "google_satellite");
+  const [mapView, setMapView] = React.useState<{ center: [number, number] | null; zoom: number | null }>({
+    center:
+      initial?.mapCenterLat != null && initial?.mapCenterLng != null
+        ? [initial.mapCenterLat, initial.mapCenterLng]
+        : null,
+    zoom: initial?.mapZoom ?? null,
+  });
   const [totalGeoJson, setTotalGeoJson] = React.useState<string | null>(initial?.totalGeoJson ?? null);
   const [lotGeoJson, setLotGeoJson] = React.useState<string | null>(initial?.lotGeoJson ?? null);
 
@@ -226,6 +236,9 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         scriptMode,
         fontFamily,
         mapTileType,
+        mapCenterLat: mapView.center?.[0] ?? null,
+        mapCenterLng: mapView.center?.[1] ?? null,
+        mapZoom: mapView.zoom,
         totalGeoJson,
         lotGeoJson,
       }
@@ -264,6 +277,9 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         scriptMode,
         fontFamily,
         mapTileType,
+        mapCenterLat: mapView.center?.[0] ?? null,
+        mapCenterLng: mapView.center?.[1] ?? null,
+        mapZoom: mapView.zoom,
         totalGeoJson,
         lotGeoJson,
         status: action === "generate" ? "GENERATED" : "DRAFT",
@@ -461,7 +477,18 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
                 {TILE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </Select>
             </Field>
-            <GeoMap totalGeoJson={totalGeoJson} lotGeoJson={lotGeoJson} height={320} tileType={mapTileType} />
+            <GeoMap
+              totalGeoJson={totalGeoJson}
+              lotGeoJson={lotGeoJson}
+              height={360}
+              tileType={mapTileType}
+              center={mapView.center}
+              zoom={mapView.zoom}
+              onViewChange={(center, zoom) => setMapView({ center, zoom })}
+            />
+            <p className="text-xs text-slate-400">
+              Xaritani surib/masshtablab kerakli ko&apos;rinishga keltiring — aynan shu ko&apos;rinish (qatlam va masshtab) Word hujjatiga joylanadi.
+            </p>
 
             <details className="rounded-lg border border-slate-200 p-3">
               <summary className="cursor-pointer text-sm text-slate-500">
