@@ -92,9 +92,41 @@ Panel domenni (`narx.namresort.uz`) va **SSL (HTTPS)** ni o'zi ulaydi (reverse p
 
 ### b) Qo'lда (SSH, sinov uchun)
 ```bash
-PORT=3000 npm start
+PORT=39876 npm start
 ```
-So'ng panelда reverse proxy `narx.namresort.uz` → `127.0.0.1:3000` qilib sozlanadi.
+So'ng panelда reverse proxy `narx.namresort.uz` → `127.0.0.1:39876` qilib sozlanadi.
+
+> **3000 portни ishlatmang** — umumiy hostingда u ko'pincha band bo'ladi. Panel bergan portni
+> yoki 39876 kabi bo'sh portni tanlang.
+
+---
+
+## ⚠️ "EADDRINUSE: address already in use :::3000" xatosi
+
+Bu port **band** ekanini bildiradi. Sabablari:
+1. Ilovaning **eski nusxasi** hali ishlab turibdi, yoki
+2. **Boshqa sayt/ilova** 3000-portni band qilgan (umumiy hostingда tez-tez uchraydi).
+
+### Yechim 1 — Boshqa portда ishga tushirish (tavsiya etiladi)
+`.env` fayliга port qo'shing (panel bergan portni yoki bo'sh bittasini):
+```env
+PORT=39876
+```
+So'ng panelдаги Node.js ilova **reverse proxy** ni shu portga (`127.0.0.1:39876`) yo'naltiring.
+Ilovani qayta ishga tushiring.
+
+> Eslatma: `PORT` ni **panel muhit o'zgaruvchisi** sifatida ham qo'yish mumkin — `next start` uni
+> avtomatik oladi.
+
+### Yechim 2 — Band portni bo'shatish (agar bu o'zingizning eski jarayoningiz bo'lsa)
+```bash
+# Kim band qilganini ko'rish:
+ss -ltnp | grep :3000      # yoki: lsof -i :3000
+# O'zingizning next jarayonini to'xtatish:
+pkill -f "next start"      # yoki: fuser -k 3000/tcp
+```
+So'ng ilovani **faqat bitta usulda** ishga tushiring — yoki panel orqali, yoki qo'lда, ikkalasи
+birga emas (aks holda ikki nusxa portни talashadi).
 
 ---
 
