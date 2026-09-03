@@ -35,6 +35,7 @@ export interface PreviewData {
   mapCenterLat?: number | null;
   mapCenterLng?: number | null;
   mapZoom?: number | null;
+  mapLineWidth?: number;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
@@ -78,6 +79,7 @@ export function DocumentPreview({ data }: { data: PreviewData }) {
             tileType={data.mapTileType}
             center={data.mapCenterLat != null && data.mapCenterLng != null ? [data.mapCenterLat, data.mapCenterLng] : null}
             zoom={data.mapZoom ?? null}
+            lineWidth={data.mapLineWidth ?? 3}
           />
         ) : data.mapUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

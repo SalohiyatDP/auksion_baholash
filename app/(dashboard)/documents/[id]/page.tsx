@@ -60,6 +60,7 @@ export default async function DocumentViewPage({
     mapCenterLat: doc.mapCenterLat,
     mapCenterLng: doc.mapCenterLng,
     mapZoom: doc.mapZoom,
+    mapLineWidth: doc.mapLineWidth,
     totalGeoJson: doc.totalGeoJson,
     lotGeoJson: doc.lotGeoJson,
   };

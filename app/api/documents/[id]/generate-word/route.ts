@@ -30,7 +30,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       doc.totalGeoJson,
       doc.lotGeoJson,
       doc.mapTileType as any,
-      view
+      view,
+      doc.mapLineWidth
     );
     if (staticMap) {
       map = staticMap;

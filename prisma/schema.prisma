@@ -228,6 +228,9 @@ model Document {
   mapCenterLng   Float?
   mapZoom        Float?
 
+  // Chizma (poligon) chiziq qalinligi
+  mapLineWidth   Float          @default(3)
+
   status         DocumentStatus @default(DRAFT)
 
   createdById    String

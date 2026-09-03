@@ -14,6 +14,7 @@ interface GeoMapProps {
   tileType?: string;
   center?: [number, number] | null; // [lat, lng]
   zoom?: number | null;
+  lineWidth?: number;
   onViewChange?: (center: [number, number], zoom: number) => void;
 }
 
@@ -60,7 +61,7 @@ function FitBounds({ total, lot }: { total: any; lot: any }) {
   return null;
 }
 
-export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite", center = null, zoom = null, onViewChange }: GeoMapProps) {
+export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite", center = null, zoom = null, lineWidth = 3, onViewChange }: GeoMapProps) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
   const isChecked = (t: string) => tileType === t;
@@ -122,10 +123,10 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
           </LayersControl>
 
           {total && (
-            <GeoJSON key={`t-${totalGeoJson?.length ?? 0}`} data={total} style={{ color: RED, weight: 3, fillColor: RED, fillOpacity: 0.12 }} />
+            <GeoJSON key={`t-${totalGeoJson?.length ?? 0}-${lineWidth}`} data={total} style={{ color: RED, weight: lineWidth, fillColor: RED, fillOpacity: 0.12 }} />
           )}
           {lot && (
-            <GeoJSON key={`l-${lotGeoJson?.length ?? 0}`} data={lot} style={{ color: BLUE, weight: 3, fillColor: BLUE, fillOpacity: 0.15 }} />
+            <GeoJSON key={`l-${lotGeoJson?.length ?? 0}-${lineWidth}`} data={lot} style={{ color: BLUE, weight: lineWidth, fillColor: BLUE, fillOpacity: 0.15 }} />
           )}
 
           {/* Saqlangan ko'rinish bo'lmasa — poligonlarga moslaymiz */}

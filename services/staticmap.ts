@@ -52,8 +52,11 @@ export async function generateStaticMap(
   totalGeoJson?: string | null,
   lotGeoJson?: string | null,
   tileType: MapTileType = "google_satellite",
-  view?: MapView | null
+  view?: MapView | null,
+  lineWidth = 3
 ): Promise<StaticMapResult | null> {
+  // Static rasm yuqori aniqlikda (1500px) — chiziqni ko'rinarli qilish uchun 2x
+  const strokeW = Math.max(1, Math.round(lineWidth * 2));
   const totalRings = collectRings(totalGeoJson);
   const lotRings = collectRings(lotGeoJson);
   if (totalRings.length === 0 && lotRings.length === 0) return null;
@@ -84,7 +87,7 @@ export async function generateStaticMap(
         const first = coords[0];
         const last = coords[coords.length - 1];
         if (first[0] !== last[0] || first[1] !== last[1]) coords.push(first);
-        map.addPolygon({ coords, color: stroke, fill, width: 6 });
+        map.addPolygon({ coords, color: stroke, fill, width: strokeW });
       }
     };
 

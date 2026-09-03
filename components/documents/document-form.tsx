@@ -41,6 +41,7 @@ export interface DocumentFormInitial {
   mapCenterLat?: number | null;
   mapCenterLng?: number | null;
   mapZoom?: number | null;
+  mapLineWidth?: number;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
@@ -105,6 +106,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
   const [scriptMode, setScriptMode] = React.useState<ScriptMode>((initial?.scriptMode as ScriptMode) ?? "LATIN");
   const [fontFamily, setFontFamily] = React.useState(initial?.fontFamily ?? "Times New Roman");
   const [mapTileType, setMapTileType] = React.useState(initial?.mapTileType ?? "google_satellite");
+  const [mapLineWidth, setMapLineWidth] = React.useState(String(initial?.mapLineWidth ?? 3));
   const [mapView, setMapView] = React.useState<{ center: [number, number] | null; zoom: number | null }>({
     center:
       initial?.mapCenterLat != null && initial?.mapCenterLng != null
@@ -239,6 +241,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         mapCenterLat: mapView.center?.[0] ?? null,
         mapCenterLng: mapView.center?.[1] ?? null,
         mapZoom: mapView.zoom,
+        mapLineWidth: Number(mapLineWidth),
         totalGeoJson,
         lotGeoJson,
       }
@@ -280,6 +283,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         mapCenterLat: mapView.center?.[0] ?? null,
         mapCenterLng: mapView.center?.[1] ?? null,
         mapZoom: mapView.zoom,
+        mapLineWidth: Number(mapLineWidth),
         totalGeoJson,
         lotGeoJson,
         status: action === "generate" ? "GENERATED" : "DRAFT",
@@ -472,11 +476,24 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
               <GeoUpload label="Umumiy maydon" color="red" geojson={totalGeoJson} onChange={(g) => setTotalGeoJson(g)} />
               <GeoUpload label="Lotlar" color="blue" geojson={lotGeoJson} onChange={(g) => setLotGeoJson(g)} />
             </div>
-            <Field label="Xarita turi (preview va Word hujjati uchun bir xil)">
-              <Select value={mapTileType} onChange={(e) => setMapTileType(e.target.value)}>
-                {TILE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </Select>
-            </Field>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Xarita turi (preview va Word uchun)">
+                <Select value={mapTileType} onChange={(e) => setMapTileType(e.target.value)}>
+                  {TILE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </Select>
+              </Field>
+              <Field label={`Chiziq qalinligi: ${mapLineWidth} px`}>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={mapLineWidth}
+                  onChange={(e) => setMapLineWidth(e.target.value)}
+                  className="mt-2 w-full accent-primary"
+                />
+              </Field>
+            </div>
             <GeoMap
               totalGeoJson={totalGeoJson}
               lotGeoJson={lotGeoJson}
@@ -484,6 +501,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
               tileType={mapTileType}
               center={mapView.center}
               zoom={mapView.zoom}
+              lineWidth={Number(mapLineWidth)}
               onViewChange={(center, zoom) => setMapView({ center, zoom })}
             />
             <p className="text-xs text-slate-400">
