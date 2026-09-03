@@ -14,6 +14,8 @@ const portEnv = process.env.PORT || "3000";
 const isSocket = Number.isNaN(Number(portEnv)); // raqam bo'lmasa — socket yo'li
 const hostname = process.env.HOST || "0.0.0.0";
 
+console.log(`[YerAuksion] PORT="${portEnv}" (${isSocket ? "socket" : "tcp"}), NODE_ENV=${process.env.NODE_ENV}`);
+
 // Production rejim (panelda berilmagan bo'lsa ham)
 process.env.NODE_ENV = process.env.NODE_ENV || "production";
 
