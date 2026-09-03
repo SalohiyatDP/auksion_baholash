@@ -1,4 +1,4 @@
-import { PrismaClient, Role, DocumentStatus, FileType } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -177,7 +177,7 @@ async function main() {
       email: adminEmail,
       username: "admin",
       passwordHash: await bcrypt.hash(adminPass, 10),
-      role: Role.ADMIN,
+      role: "ADMIN",
     },
   });
 
@@ -189,7 +189,7 @@ async function main() {
       email: opEmail,
       username: "operator",
       passwordHash: await bcrypt.hash(opPass, 10),
-      role: Role.OPERATOR,
+      role: "OPERATOR",
     },
   });
 
@@ -221,7 +221,7 @@ async function main() {
           "O'zbekiston Respublikasi Vazirlar Mahkamasining 2022 yil 14 fevraldagi 71-son qarori " +
           "2-ilovasi bilan tasdiqlangan Nizomning 22-bandiga muvofiq, yer uchastkasiga ijara huquqini " +
           "elektron onlayn-auksion savdolariga chiqarishda boshlang'ich narx quyidagi formula asosida aniqlanadi:",
-        status: DocumentStatus.GENERATED,
+        status: "GENERATED",
         createdById: operator.id,
         calculation: {
           create: {

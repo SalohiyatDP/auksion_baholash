@@ -22,10 +22,11 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status as Prisma.DocumentWhereInput["status"];
     if (districtId) where.districtId = Number(districtId);
     if (q) {
+      // SQLite: `contains` ASCII uchun katta-kichik harfga sezgir emas; `mode` ishlatilmaydi
       where.OR = [
-        { projectName: { contains: q, mode: "insensitive" } },
-        { documentNumber: { contains: q, mode: "insensitive" } },
-        { mfy: { contains: q, mode: "insensitive" } },
+        { projectName: { contains: q } },
+        { documentNumber: { contains: q } },
+        { mfy: { contains: q } },
       ];
     }
 

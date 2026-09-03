@@ -4,7 +4,9 @@ Ushbu qo'llanma loyihani serverга (VPS) joylash va **avtomatik HTTPS** bilan
 `https://narx.namresort.uz` domenida ishga tushirish tartibini beradi.
 
 Ishlatiladigan texnologiya: **Docker Compose** + **Caddy** (Let's Encrypt SSL avtomatik) +
-**Next.js** + **PostgreSQL**. Hech qanday API kalit shart emas.
+**Next.js** + **SQLite** (alohida DB serveri kerak emas). Hech qanday API kalit shart emas.
+
+> Umumiy hosting (ISPmanager, Docker'siz) uchun: [`DEPLOY_HOSTING.md`](./DEPLOY_HOSTING.md).
 
 ---
 
@@ -75,7 +77,6 @@ nano .env
 ```
 
 `.env` ichida:
-- `POSTGRES_PASSWORD` — kuchli parol.
 - `JWT_SECRET` — uzun tasodifiy kalit. Yaratish:
   ```bash
   openssl rand -hex 32
@@ -108,9 +109,8 @@ docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 Bu:
-1. PostgreSQL'ni ko'taradi,
-2. ilovani build qiladi, bazani tayyorlaydi (`prisma db push`) va boshlang'ich ma'lumotlarni yuklaydi (seed),
-3. Caddy avtomatik ravishda Let's Encrypt'дан **SSL sertifikat** oladi.
+1. ilovani build qiladi, SQLite bazasini tayyorlaydi (`prisma db push`) va boshlang'ich ma'lumotlarni yuklaydi (seed),
+2. Caddy avtomatik ravishda Let's Encrypt'дан **SSL sertifikat** oladi.
 
 Loglarni kuzatish:
 ```bash

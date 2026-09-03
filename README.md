@@ -21,9 +21,8 @@ docker compose up --build
 
 So'ng brauzerda oching: **http://localhost:3000**
 
-Konteynerlar:
-- `yerauksion-db` — PostgreSQL 16
-- `yerauksion-app` — Next.js ilovasi (avtomatik: sxema qo'llash + seed + start)
+Konteyner:
+- `yerauksion-app` — Next.js + **SQLite** (avtomatik: sxema qo'llash + seed + start). Alohida DB serveri kerak emas.
 
 To'xtatish:
 ```bash
@@ -82,7 +81,7 @@ qiladi (M = 0,9)** va to'g'ri natijani beradi. Batafsil: `PLAN.md`, 7-bo'lim.
 
 - **Frontend:** Next.js 15 (App Router), TypeScript, React 19, Tailwind CSS, shadcn uslubidagi komponentlar, Lucide
 - **Backend:** Next.js API Routes (modulli servis qatlami)
-- **DB:** PostgreSQL + Prisma ORM
+- **DB:** SQLite + Prisma ORM (fayl asosidagi baza — server/kredentsial talab qilinmaydi)
 - **Hujjat:** [`docx`](https://www.npmjs.com/package/docx) — haqiqiy `.docx` (A4, Times New Roman, jadval, xarita rasmi)
 - **Auth:** JWT (httpOnly cookie) + rol asosida (RBAC)
 - **Fayl saqlash:** lokal disk (`StorageProvider` abstraktsiyasi orqali kelajakda S3 ga o'tish mumkin)
@@ -135,12 +134,12 @@ Qatlamlar ajratilgan: **UI / biznes-mantiq / DB / hujjat generatsiyasi / hisobla
 
 ## 💻 Lokal ishga tushirish (Docker'siz)
 
-Talab: Node.js 20+, PostgreSQL 14+.
+Talab: Node.js 20+ (alohida ma'lumotlar bazasi serveri **kerak emas** — SQLite).
 
 ```bash
-cp .env.example .env          # va DATABASE_URL ni sozlang
+cp .env.example .env          # standart DATABASE_URL SQLite (data/app.db)
 npm install
-npx prisma db push            # sxemani yaratadi
+npx prisma db push            # data/app.db bazasini yaratadi
 npx prisma db seed            # boshlang'ich ma'lumotlar
 npm run dev                   # http://localhost:3000
 ```

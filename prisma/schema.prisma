@@ -1,32 +1,18 @@
 // YerAuksion — Ma'lumotlar bazasi sxemasi
-// PostgreSQL + Prisma
+// SQLite + Prisma (fayl asosidagi baza — server/kredentsial talab qilinmaydi)
+//
+// Eslatma: SQLite enum'ni qo'llamaydi, shuning uchun role/status/type maydonlari String.
+//   role:   ADMIN | OPERATOR
+//   status: DRAFT | GENERATED | ARCHIVED
+//   type:   MAP_IMAGE | GENERATED_DOCX | TOTAL_GEO | LOT_GEO | STATIC_MAP
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum Role {
-  ADMIN
-  OPERATOR
-}
-
-enum DocumentStatus {
-  DRAFT
-  GENERATED
-  ARCHIVED
-}
-
-enum FileType {
-  MAP_IMAGE
-  GENERATED_DOCX
-  TOTAL_GEO
-  LOT_GEO
-  STATIC_MAP
 }
 
 model User {
@@ -35,7 +21,7 @@ model User {
   email        String     @unique
   username     String     @unique
   passwordHash String
-  role         Role       @default(OPERATOR)
+  role         String     @default("OPERATOR")
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -231,7 +217,7 @@ model Document {
   // Chizma (poligon) chiziq qalinligi
   mapLineWidth   Float          @default(3)
 
-  status         DocumentStatus @default(DRAFT)
+  status         String         @default("DRAFT")
 
   createdById    String
   createdBy      User           @relation(fields: [createdById], references: [id])
@@ -262,7 +248,7 @@ model DocumentFile {
   id           String   @id @default(cuid())
   documentId   String
   document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  type         FileType
+  type         String
   path         String
   originalName String
   size         Int

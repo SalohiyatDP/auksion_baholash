@@ -1,168 +1,149 @@
-# YerAuksion — Umumiy hosting (ISPmanager, Docker'siz) ga joylash
+# YerAuksion — Umumiy hosting (ISPmanager, `narx.namresort.uz`) ga joylash
 
-Agar serveringiz **Docker** emas, balki **ISPmanager / cPanel** kabi panel bilan Node.js
-ilovalarini ishlatsa (masalan `/var/www/.../narx.namresort.uz`), quyidagicha joylashtiring.
+Bu qo'llanma ilovani **ISPmanager** panelida Docker'siz, to'g'ridan-to'g'ri **Node.js** ilovasi
+sifatida ishga tushirish uchun.
 
-> Build muvaffaqiyatli o'tdi. Yagona kerakli narsa — **`.env` fayl** va **PostgreSQL bazasi**.
-
----
-
-## ⚠️ Sizdagi xatoning sababi
-
-```
-Error: Environment variable not found: DATABASE_URL.
-```
-
-`prisma db push` loyiha papkasidagi **`.env`** faylidan `DATABASE_URL` ni o'qiydi. U hozircha yo'q.
-Uni yaratsak, muammo hal bo'ladi.
+> **MUHIM:** Baza sifatida **SQLite** ishlatiladi — server, foydalanuvchi/parol, PostgreSQL/MySQL
+> **kerak emas**. Barcha ma'lumot `data/app.db` faylida saqlanadi. Shu sabab P1000/P1010 kabi baza
+> kredentsial xatolari umuman bo'lmaydi.
 
 ---
 
-## 1. PostgreSQL bazasini yarating (panel orqali)
+## 1. Node.js versiyasi
 
-ISPmanager panelида: **Ma'lumotlar bazalari → PostgreSQL → Baza yaratish**.
-- Baza nomi: masalan `narx_db`
-- Foydalanuvchi: masalan `narx_user`
-- Parol: kuchli parol
+Panelda ilovaga **Node.js 20 yoki 22** ni tanlang.
 
-> Agar panelда faqat **MySQL** bo'lsa (PostgreSQL yo'q bo'lsa) — menga ayting, Prisma'ni MySQL'ga
-> o'tkazib beraman (bir necha qatorlik o'zgarish).
+> Node 26 kabi juda yangi versiyalarda `sharp`/`staticmaps` (Word hujjatidagi static xarita rasmi
+> uchun) ishlamasligi mumkin. **20/22 LTS** eng barqaror.
 
 ---
 
-## 2. `.env` faylini yarating
-
-Loyiha papkasida (`.../narx.namresort.uz`) `.env` fayl yarating:
+## 2. Loyihani serverga olish (SSH)
 
 ```bash
-cd /var/www/s0277/data/www/narx.namresort.uz
+cd /var/www/USER/data/www           # USER — hosting login
+rm -rf narx.namresort.uz            # bo'sh bo'lsa shart emas
+git clone https://github.com/SalohiyatDP/auksion_baholash.git narx.namresort.uz
+cd narx.namresort.uz
+git checkout feat/yerauksion
+```
+
+## 3. O'rnatish va build
+
+```bash
+npm install
+npm run build
+```
+> RAM yetmasa: `NODE_OPTIONS="--max-old-space-size=1024" npm run build`
+
+## 4. `.env` faylini yaratish
+
+Loyiha papkasining to'liq yo'lini `pwd` bilan aniqlang, so'ng:
+
+```bash
+cp .env.example .env
 nano .env
 ```
 
-Ichiga (o'z qiymatlaringiz bilan):
+`.env` ichi (TO'LIQ yo'l bilan — `USER` ni o'zingiznikiga almashtiring):
 
 ```env
-DATABASE_URL="postgresql://narx_user:PAROL@127.0.0.1:5432/narx_db?schema=public"
-JWT_SECRET="BU_YERGA_UZUN_TASODIFIY_KALIT"
-STORAGE_DIR="./storage"
+DATABASE_URL="file:/var/www/USER/data/www/narx.namresort.uz/data/app.db"
+JWT_SECRET="UZUN_TASODIFIY_KALIT"
+STORAGE_DIR="/var/www/USER/data/www/narx.namresort.uz/storage"
 NEXT_PUBLIC_APP_URL="https://narx.namresort.uz"
 SEED_ADMIN_EMAIL="admin@namresort.uz"
-SEED_ADMIN_PASSWORD="ADMIN_PAROLI"
+SEED_ADMIN_PASSWORD="KUCHLI_PAROL"
 SEED_OPERATOR_EMAIL="operator@namresort.uz"
-SEED_OPERATOR_PASSWORD="OPERATOR_PAROLI"
+SEED_OPERATOR_PASSWORD="KUCHLI_PAROL2"
 NODE_ENV="production"
 ```
+`JWT_SECRET` uchun: `openssl rand -hex 32`
 
-`JWT_SECRET` yaratish:
-```bash
-openssl rand -hex 32
-```
-
-> `PAROL`, `narx_user`, `narx_db` — 1-qadamda yaratgan qiymatlaringiz.
-> Agar PostgreSQL boshqa portда bo'lsa (masalan panel ko'rsatgan), portni moslang.
-
----
-
-## 3. Baza jadvallarini yaratish va boshlang'ich ma'lumotlar
+## 5. Baza va boshlang'ich ma'lumotlar (bir marta)
 
 ```bash
+mkdir -p data storage
+npx prisma generate
 npx prisma db push
-npx prisma db seed
+npm run seed
+```
+- `prisma db push` — `data/app.db` SQLite bazasini yaratadi.
+- `npm run seed` — admin/operator va namunaviy ma'lumotlarni yozadi.
+
+## 6. Panelda Node.js ilovasini sozlash
+
+ISPmanager: **Node.js ilovasini ishga tushirish parametrlari**:
+
+| Maydon | Qiymat |
+|--------|--------|
+| **Ilova papkasi (App root)** | `/var/www/USER/data/www/narx.namresort.uz` |
+| **Ishga tushirish buyrug'i (Команда запуска)** | `node server.js` |
+| **Node.js versiyasi** | 20 yoki 22 |
+| **Rejim** | Production |
+
+**Ishga tushirishdan oldingi buyruq (ixtiyoriy):**
+```
+npm install && npm run build && npm run prisma:push && npm run seed
+```
+> Bu har restartda build qiladi (sekin). Odatda 2–5-bosqichni bir marta qo'lda bajarib,
+> pre-launch'ни o'chirib qo'yish yoki faqat `npm run prisma:push` qoldirish yaxshiroq.
+
+**Muhit o'zgaruvchilari (Переменная окружения)** — `.env` fayldan o'qiladi. Ishonch uchun panelga
+ham qo'shishingiz mumkin: `DATABASE_URL`, `JWT_SECRET`, `NODE_ENV=production`, `STORAGE_DIR`,
+`NEXT_PUBLIC_APP_URL`, seed parollari.
+
+So'ng **"Сохранить и перезапустить"**. Panel domen + SSL + portga proxy'ni o'zi ulaydi.
+
+## 7. SSL (HTTPS)
+
+Panelda **Let's Encrypt** sertifikatini `narx.namresort.uz` uchun oling va **HTTP → HTTPS**
+yo'naltirishни yoqing. (Cookie HTTPS'da avtomatik `secure` bo'ladi — kodda hisobga olingan.)
+
+## 8. Katta fayl yuklash (SHP/KMZ/rasm) — Nginx limiti
+
+Domen → **Nginx qo'shimcha direktivalari**:
+```
+client_max_body_size 30m;
 ```
 
-yoki bitta buyruq bilan:
-```bash
-npm run deploy:db
-```
-
-Muvaffaqiyatли bo'lsa: admin va operator foydalanuvchilari + namunaviy hujjat yaratiladi.
-
----
-
-## 4. Ilovani ishga tushirish
-
-### a) Panel orqali (ISPmanager — tavsiya etiladi)
-- **Ishga tushirish buyrug'i (Команда запуска):** `node server.js`
-  - Loyihada `server.js` bor — u panel bergan **PORT** da ishlaydi (3000 emas), shuning uchun
-    "EADDRINUSE :::3000" xatosi chiqmaydi.
-- **Ishga tushirishdan oldingi buyruq (Дополнительная команда):**
-  `npm install --include=dev && npm run build && npm run prisma:push && npm run seed`
-  (`seed` skripti endi mavjud; xohlasangiz `npm run deploy:db` bir o'zi push+seed qiladi.)
-- **Muhit o'zgaruvchilari** — `.env` fayl o'qiladi (yoki panelга `DATABASE_URL`, `JWT_SECRET`,
-  `NODE_ENV=production`, seed parollarини qo'shing). `PORT` ni panel avtomatik beradi.
-
-Panel domenni (`narx.namresort.uz`) va **SSL (HTTPS)** ni o'zi ulaydi (reverse proxy).
-
-### b) Qo'lда (SSH, sinov uchun)
-```bash
-PORT=39876 npm start
-```
-So'ng panelда reverse proxy `narx.namresort.uz` → `127.0.0.1:39876` qilib sozlanadi.
-
-> **3000 portни ishlatmang** — umumiy hostingда u ko'pincha band bo'ladi. Panel bergan portni
-> yoki 39876 kabi bo'sh portni tanlang.
-
----
-
-## ⚠️ "EADDRINUSE: address already in use :::3000" xatosi
-
-Bu port **band** ekanini bildiradi. Sabablari:
-1. Ilovaning **eski nusxasi** hali ishlab turibdi, yoki
-2. **Boshqa sayt/ilova** 3000-portni band qilgan (umumiy hostingда tez-tez uchraydi).
-
-### Yechim 1 — Boshqa portда ishga tushirish (tavsiya etiladi)
-`.env` fayliга port qo'shing (panel bergan portni yoki bo'sh bittasini):
-```env
-PORT=39876
-```
-So'ng panelдаги Node.js ilova **reverse proxy** ni shu portga (`127.0.0.1:39876`) yo'naltiring.
-Ilovani qayta ishga tushiring.
-
-> Eslatma: `PORT` ni **panel muhit o'zgaruvchisi** sifatida ham qo'yish mumkin — `next start` uni
-> avtomatik oladi.
-
-### Yechim 2 — Band portni bo'shatish (agar bu o'zingizning eski jarayoningiz bo'lsa)
-```bash
-# Kim band qilganini ko'rish:
-ss -ltnp | grep :3000      # yoki: lsof -i :3000
-# O'zingizning next jarayonini to'xtatish:
-pkill -f "next start"      # yoki: fuser -k 3000/tcp
-```
-So'ng ilovani **faqat bitta usulda** ishga tushiring — yoki panel orqali, yoki qo'lда, ikkalasи
-birga emas (aks holda ikki nusxa portни talashadi).
-
----
-
-## 5. Yangilash (kod o'zgargach)
+## 9. Yangilash
 
 ```bash
-cd /var/www/s0277/data/www/narx.namresort.uz
+cd /var/www/USER/data/www/narx.namresort.uz
 git pull
 npm install
 npm run build
-npm run deploy:db     # sxema o'zgargan bo'lsa
-# panelда ilovани "Restart" qiling (yoki jarayonni qayta ishga tushiring)
+npx prisma db push     # sxema o'zgargan bo'lsa
+```
+So'ng panelda ilovани **Restart**. Ma'lumotlar `data/` va `storage/` da saqlanib qoladi.
+
+## 10. Zaxira (backup)
+
+```bash
+tar czf ~/backup-$(date +%F).tar.gz data storage
 ```
 
 ---
 
-## 6. Muhim eslatmalar
+## 11. Tez-tez uchraydigan muammolar
 
-- **Node versiyasi:** sizда Node 26 ko'rindi. `sharp`/`staticmaps` (Word xaritasi uchun) juda yangi
-  Node'да muammo qilsa, hujjat generatsiyasi ishlamasligi mumkin. Agar shunday bo'lsa —
-  **Node 20 yoki 22 LTS** ni tanlang (ISPmanager'да Node versiyasini o'zgartirish mumkin).
-- **Xavfsizlik (Next.js):** `next@15.1.4` da ogohlantirish bor. Yangilash tavsiya etiladi:
-  `npm i next@^15` (so'ng `npm run build`). Buni sinov muhitида tekshirib ko'ring.
-- **`.env` maxfiy** — hech kimga bermang, git'ga qo'shilmaydi.
-- **storage** papkasi (yuklangan xaritalar va generatsiya qilingan `.docx`) saqlanib turishi kerak —
-  uni backup qiling.
+| Muammo | Yechim |
+|--------|--------|
+| **`EADDRINUSE :::3000`** | Panel `PORT` bermayapti yoki 3000 band. `PORT` muhit o'zgaruvchisini qo'shing (panel bergan port yoki bo'sh port, masalan `39876`). `server.js` `process.env.PORT` ni oladi. |
+| **`502 Bad Gateway`** | Node ilova ishlamayapti yoki port mos emas. Panel loglarini ko'ring; `PORT` panel proxy porti bilan bir xilligini tekshiring. |
+| **Baza xatosi** | `DATABASE_URL` to'liq yo'l ekanini va `data/` papka yozuvга ruxsatli ekanini tekshiring. |
+| **Word'da xarita chiqmaydi** | `sharp`/`staticmaps` Node versiyasiga mos emas — Node **20/22** ga o'ting. (Preview xarita baribir ishlaydi.) |
+| **Katta fayl yuklanmaydi** | Nginx `client_max_body_size 30m;` qo'shing. |
+| **Prisma engine/openssl xatosi** | `npx prisma generate` ni serverda qayta bajaring. |
 
 ---
 
-## 7. Tez tekshiruv ro'yxati
+## 12. Tez tekshiruv ro'yxati
 
-- [ ] PostgreSQL baza yaratildi (yoki MySQL — menga xabar bering)
-- [ ] `.env` fayl to'g'ri `DATABASE_URL` bilan yaratildi
-- [ ] `npm run deploy:db` xatosiz o'tdi
-- [ ] `npm start` ishladi, panel portга ulandi
-- [ ] `https://narx.namresort.uz` ochildi va login sahifasi chiqdi
+- [ ] Node 20/22 tanlandi
+- [ ] `npm install && npm run build` xatosiz o'tdi
+- [ ] `.env` yaratildi (SQLite `DATABASE_URL` to'liq yo'l bilan)
+- [ ] `npx prisma db push && npm run seed` o'tdi (`data/app.db` yaratildi)
+- [ ] Panel: startup `node server.js`, kerak bo'lsa `PORT` env qo'shildi
+- [ ] Ilova ishga tushdi, `https://narx.namresort.uz` ochildi
