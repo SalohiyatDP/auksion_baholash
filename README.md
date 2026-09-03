@@ -160,29 +160,22 @@ hujjatlarning hisob-kitobi o'zgarmaydi.
 
 ---
 
-## 🗺 Xarita: SHP / KMZ / KML / GeoJSON + Google Maps
+## 🗺 Xarita: SHP / KMZ / KML / GeoJSON (KALITSIZ)
 
 Hujjat formasida ikkita geografik yuklash mavjud:
 - **Umumiy maydon** — xaritada **qizil** chiziq bilan
 - **Lotlar** — xaritada **ko'k** chiziq bilan
 
 Qo'llab-quvvatlanadigan formatlar: **SHP** (`.zip` shaklida), **KMZ**, **KML**, **GeoJSON**. Fayllar
-brauzerda GeoJSON ga o'giriladi, interaktiv **Google xaritada** ko'rsatiladi, va hujjat (`.docx`) ga
-**Google Static Maps** orqali qizil/ko'k chiziqli rasm sifatida joylanadi.
+brauzerda GeoJSON ga o'giriladi.
 
-### Google Maps kalitini sozlash
+**Xarita hech qanday API kalit talab qilmaydi.** Ochiq manbalar ishlatiladi:
+- **Interaktiv xarita:** [Leaflet](https://leafletjs.com) + OpenStreetMap / Esri sun'iy yo'ldosh /
+  Google tayllar (qatlamni almashtirish mumkin).
+- **Hujjatdagi rasm (.docx):** [`staticmaps`](https://www.npmjs.com/package/staticmaps) kutubxonasi
+  serverda tayllarni yig'ib, qizil/ko'k poligonli PNG rasm shakllantiradi.
 
-1. [Google Cloud Console](https://console.cloud.google.com) da **Maps JavaScript API** va **Maps Static API** ni yoqing.
-2. API kalit yarating.
-3. Kalitni bering (ikki usuldan biri):
-   - `docker-compose.yml` yonida `.env` fayl yarating:
-     ```
-     GOOGLE_MAPS_API_KEY=SIZNING_KALITINGIZ
-     ```
-   - yoki muhit o'zgaruvchisi sifatida `export GOOGLE_MAPS_API_KEY=...` qilib `docker compose up` ni ishga tushiring.
-
-> Kalit bo'lmasa ham ilova ishlaydi — faqat interaktiv xarita va hujjatdagi static map ko'rinmaydi
-> (bu holda tayyor rasmni qo'lda yuklash mumkin).
+> Ya'ni faqat internet ulanishi bo'lsa kifoya — kalit sozlash shart emas.
 
 ## 🔤 Alifbo (Lotin / Kirill)
 

@@ -10,6 +10,8 @@ const nextConfig = {
       bodySizeLimit: "25mb",
     },
   },
+  // sharp/staticmaps native paketlarini server bundle'dan tashqarida qoldirish
+  serverExternalPackages: ["sharp", "staticmaps"],
   webpack: (config) => {
     // shpjs/togeojson kabi kutubxonalar uchun brauzerda node core modullarini o'chirish
     config.resolve = config.resolve || {};

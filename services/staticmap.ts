@@ -1,75 +1,78 @@
 import { extractRings, simplifyRing, type Ring } from "@/lib/geo/geojson";
-import { encodePolyline } from "@/lib/geo/polyline";
 
-// Google Static Maps API orqali xarita rasmini shakllantiradi.
-// Umumiy maydon — QIZIL, lotlar — KO'K chiziq bilan.
+// Hujjat uchun xarita rasmini KALITSIZ shakllantiradi.
+// `staticmaps` kutubxonasi OpenStreetMap/Esri tayllarini serverda yig'ib PNG chiqaradi.
+// Umumiy maydon — QIZIL, lotlar — KO'K poligon bilan.
 
-const RED = "0xD32F2Fff";
-const RED_FILL = "0xD32F2F22";
-const BLUE = "0x1E40AFff";
-const BLUE_FILL = "0x1E40AF22";
+// Esri World Imagery (sun'iy yo'ldosh) — kalitsiz
+const ESRI_SATELLITE =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
-function ringsToPaths(rings: Ring[], color: string, fill: string): string[] {
-  const paths: string[] = [];
-  for (const ring of rings) {
-    if (ring.length < 2) continue;
-    const simplified = simplifyRing(ring, 70);
-    const enc = encodePolyline(simplified);
-    paths.push(`path=color:${color}|weight:3|fillcolor:${fill}|enc:${enc}`);
-  }
-  return paths;
-}
+const RED_STROKE = "#D32F2FEE";
+const RED_FILL = "#D32F2F33";
+const BLUE_STROKE = "#1E40AFEE";
+const BLUE_FILL = "#1E40AF44";
 
 export interface StaticMapResult {
   buffer: Buffer;
   mime: string;
 }
 
+function collectRings(geojsonStr?: string | null): Ring[] {
+  if (!geojsonStr) return [];
+  try {
+    return extractRings(JSON.parse(geojsonStr));
+  } catch {
+    return [];
+  }
+}
+
 /**
- * total/lot GeoJSON matnlaridan Google Static Map rasmini yuklab oladi.
- * Kalit yoki geometriya bo'lmasa null qaytaradi.
+ * total/lot GeoJSON dan kalitsiz xarita rasmini shakllantiradi.
+ * Geometriya bo'lmasa yoki xatolik bo'lsa null qaytaradi.
  */
 export async function generateStaticMap(
   totalGeoJson?: string | null,
   lotGeoJson?: string | null
 ): Promise<StaticMapResult | null> {
-  const key = process.env.GOOGLE_MAPS_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!key) return null;
-
-  const paths: string[] = [];
-  try {
-    if (totalGeoJson) {
-      const rings = extractRings(JSON.parse(totalGeoJson));
-      paths.push(...ringsToPaths(rings, RED, RED_FILL));
-    }
-    if (lotGeoJson) {
-      const rings = extractRings(JSON.parse(lotGeoJson));
-      paths.push(...ringsToPaths(rings, BLUE, BLUE_FILL));
-    }
-  } catch {
-    return null;
-  }
-
-  if (paths.length === 0) return null;
-
-  // Static Maps paths mavjud bo'lganda markaz/zoom avtomatik moslashtiriladi.
-  const base = "https://maps.googleapis.com/maps/api/staticmap";
-  let url = `${base}?size=640x600&scale=2&maptype=hybrid&${paths.join("&")}&key=${key}`;
-
-  // URL juda uzun bo'lsa, nuqtalarni yanada kamaytiramiz
-  if (url.length > 8000) {
-    const reduced: string[] = [];
-    if (totalGeoJson) reduced.push(...ringsToPaths(extractRings(JSON.parse(totalGeoJson)).map((r) => simplifyRing(r, 30)), RED, RED_FILL));
-    if (lotGeoJson) reduced.push(...ringsToPaths(extractRings(JSON.parse(lotGeoJson)).map((r) => simplifyRing(r, 30)), BLUE, BLUE_FILL));
-    url = `${base}?size=640x600&scale=2&maptype=hybrid&${reduced.join("&")}&key=${key}`;
-  }
+  const totalRings = collectRings(totalGeoJson);
+  const lotRings = collectRings(lotGeoJson);
+  if (totalRings.length === 0 && lotRings.length === 0) return null;
 
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const arrayBuffer = await res.arrayBuffer();
-    return { buffer: Buffer.from(arrayBuffer), mime: "image/png" };
-  } catch {
+    // Dinamik import — faqat serverda yuklanadi (sharp asosida)
+    const mod: any = await import("staticmaps");
+    const StaticMaps = mod.default || mod;
+
+    const map = new StaticMaps({
+      width: 1000,
+      height: 800,
+      tileUrl: ESRI_SATELLITE,
+      tileSize: 256,
+    });
+
+    const addRings = (rings: Ring[], stroke: string, fill: string) => {
+      for (const ring of rings) {
+        if (ring.length < 3) continue;
+        const simplified = simplifyRing(ring, 400);
+        // staticmaps koordinatalari [lon, lat] tartibida
+        const coords = simplified.map(([lat, lng]) => [lng, lat] as [number, number]);
+        // poligonni yopamiz
+        const first = coords[0];
+        const last = coords[coords.length - 1];
+        if (first[0] !== last[0] || first[1] !== last[1]) coords.push(first);
+        map.addPolygon({ coords, color: stroke, fill, width: 4 });
+      }
+    };
+
+    addRings(totalRings, RED_STROKE, RED_FILL);
+    addRings(lotRings, BLUE_STROKE, BLUE_FILL);
+
+    await map.render(); // markaz/zoom avtomatik moslashadi
+    const buffer: Buffer = await map.image.buffer("image/png");
+    return { buffer, mime: "image/png" };
+  } catch (e) {
+    console.error("Static map xatosi:", e);
     return null;
   }
 }
