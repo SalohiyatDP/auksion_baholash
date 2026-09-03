@@ -19,7 +19,6 @@ import { calculateStartingPrice } from "./calculation";
 import { formatInteger, formatHectare, formatDecimal, formatDate } from "@/lib/format";
 import { getImageSize } from "@/lib/image-size";
 import { latinToCyrillic } from "@/lib/translit";
-import { numberToWordsUz } from "@/lib/number-to-words";
 
 let FONT = "Times New Roman";
 const BODY_SIZE = 28; // 14pt
@@ -201,21 +200,6 @@ function buildTextContent(d: DocxData, tr: Tr): (Paragraph | Table)[] {
           font: FONT,
           size: 30,
           color: GREEN,
-        }),
-      ],
-    }),
-
-    // Narx so'z bilan (matnda)
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 160 },
-      children: [
-        new TextRun({
-          text: tr(`(so'zda: ${numberToWordsUz(d.startingPrice)} so'm)`),
-          italics: true,
-          font: FONT,
-          size: 24,
-          color: "334155",
         }),
       ],
     }),

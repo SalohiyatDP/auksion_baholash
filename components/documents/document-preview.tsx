@@ -3,7 +3,6 @@
 import * as React from "react";
 import { formatInteger, formatHectare, formatDecimal } from "@/lib/format";
 import { latinToCyrillic, type ScriptMode } from "@/lib/translit";
-import { numberToWordsUz } from "@/lib/number-to-words";
 import { GeoMap } from "./geo-map";
 
 export interface PreviewData {
@@ -139,9 +138,6 @@ function TextBody({ data, mode }: { data: PreviewData; mode: "LATIN" | "CYRILLIC
         <span style={{ display: "inline-block", background: "#ecfdf5", color: "#047857", border: "1px solid #a7f3d0", borderRadius: 8, padding: "8px 18px", fontWeight: "bold", fontSize: 16 }}>
           {tr("Boshlang'ich narx")}: {formatInteger(data.startingPrice)} {tr("so'm")}
         </span>
-        <p style={{ fontStyle: "italic", color: "#475569", marginTop: 6, fontSize: 13 }}>
-          {tr(`(so'zda: ${numberToWordsUz(data.startingPrice)} so'm)`)}
-        </p>
       </div>
 
       {/* Xarita sarlavhasi va legenda (matn) */}
