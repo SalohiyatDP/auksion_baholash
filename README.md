@@ -160,6 +160,15 @@ hujjatlarning hisob-kitobi o'zgarmaydi.
 
 ---
 
+## 🌐 Ishlab chiqarishga joylash (Deployment)
+
+`narx.namresort.uz` kabi domenga joylash — Caddy orqali avtomatik HTTPS bilan:
+```bash
+cp .env.prod.example .env   # qiymatlarni to'ldiring
+docker compose -f docker-compose.prod.yml up -d --build
+```
+To'liq bosqichma-bosqich qo'llanma: [`DEPLOY.md`](./DEPLOY.md).
+
 ## 🗺 Xarita: SHP / KMZ / KML / GeoJSON (KALITSIZ)
 
 Hujjat formasida ikkita geografik yuklash mavjud:
