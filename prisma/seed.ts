@@ -146,6 +146,23 @@ async function main() {
     });
   }
 
+  // ---- Balansda saqlovchi tashkilotlar ----
+  for (const name of [
+    "Namangan turistik-rekreatsion hududlarini rivojlantirish direksiyasi",
+    "Tuman hokimligi yer resurslari bo'limi",
+  ]) {
+    await prisma.organization.upsert({ where: { name }, update: {}, create: { name } });
+  }
+
+  // ---- Loyiha maqsadlari ----
+  for (const name of [
+    "turistik-rekreatsion loyihani amalga oshirish",
+    "savdo-maishiy xizmat ko'rsatish obyektini qurish",
+    "sanoat korxonasini tashkil etish",
+  ]) {
+    await prisma.projectPurpose.upsert({ where: { name }, update: {}, create: { name } });
+  }
+
   // ---- Foydalanuvchilar ----
   const adminEmail = process.env.SEED_ADMIN_EMAIL || "admin@yerauksion.uz";
   const adminPass = process.env.SEED_ADMIN_PASSWORD || "admin123";

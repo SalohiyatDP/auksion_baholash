@@ -146,6 +146,18 @@ export function SettingsClient() {
       <EditableTable title="Huquqiy asos" entity="legal"
         fields={legalFields} columns={legalCols}
         makeEmpty={() => ({ title: "", body: "", isActive: true })} />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <EditableTable title="Balansda saqlovchi tashkilotlar" entity="organization"
+          fields={[{ key: "name", label: "Tashkilot nomi", type: "text" }]}
+          columns={[{ key: "name", label: "Nomi" }]}
+          makeEmpty={() => ({ name: "" })} />
+
+        <EditableTable title="Loyiha maqsadlari" entity="purpose"
+          fields={[{ key: "name", label: "Maqsad matni", type: "text" }]}
+          columns={[{ key: "name", label: "Matn" }]}
+          makeEmpty={() => ({ name: "" })} />
+      </div>
     </div>
   );
 }

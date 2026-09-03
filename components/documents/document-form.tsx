@@ -36,9 +36,21 @@ export interface DocumentFormInitial {
   e?: number;
   hasMap?: boolean;
   scriptMode?: string;
+  fontFamily?: string;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
+
+const FONT_OPTIONS = [
+  "Times New Roman",
+  "Arial",
+  "Cambria",
+  "Georgia",
+  "PT Astra Serif",
+  "Verdana",
+  "Tahoma",
+  "Calibri",
+];
 
 interface CalcResponse {
   coefficients: {
@@ -60,6 +72,8 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
   const [usages, setUsages] = React.useState<UsageOption[]>([]);
   const [engineering, setEngineering] = React.useState<EngOption[]>([]);
   const [legalText, setLegalText] = React.useState("");
+  const [organizations, setOrganizations] = React.useState<{ id: number; name: string }[]>([]);
+  const [purposes, setPurposes] = React.useState<{ id: number; name: string }[]>([]);
 
   // Forma qiymatlari
   const [regionId, setRegionId] = React.useState<string>(initial?.regionId ? String(initial.regionId) : "");
@@ -77,6 +91,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
   const [e, setE] = React.useState(initial?.e != null ? String(initial.e) : "0");
 
   const [scriptMode, setScriptMode] = React.useState<ScriptMode>((initial?.scriptMode as ScriptMode) ?? "LATIN");
+  const [fontFamily, setFontFamily] = React.useState(initial?.fontFamily ?? "Times New Roman");
   const [totalGeoJson, setTotalGeoJson] = React.useState<string | null>(initial?.totalGeoJson ?? null);
   const [lotGeoJson, setLotGeoJson] = React.useState<string | null>(initial?.lotGeoJson ?? null);
 
@@ -97,12 +112,20 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
       try {
         const [r, c] = await Promise.all([
           apiFetch<{ regions: Option[] }>("/api/regions"),
-          apiFetch<{ landUsage: UsageOption[]; engineering: EngOption[]; legal: { body: string }[] }>("/api/coefficients"),
+          apiFetch<{
+            landUsage: UsageOption[];
+            engineering: EngOption[];
+            legal: { body: string }[];
+            organizations: { id: number; name: string }[];
+            purposes: { id: number; name: string }[];
+          }>("/api/coefficients"),
         ]);
         setRegions(r.regions);
         setUsages(c.landUsage);
         setEngineering(c.engineering);
         setLegalText(c.legal[0]?.body ?? "");
+        setOrganizations(c.organizations ?? []);
+        setPurposes(c.purposes ?? []);
         if (r.regions.length === 1 && !regionId) setRegionId(String(r.regions[0].id));
       } catch (err) {
         error(err instanceof Error ? err.message : "Ma'lumotlarni yuklashda xatolik");
@@ -191,6 +214,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         formula: calc.result.formula,
         mapUrl: mapPreview,
         scriptMode,
+        fontFamily,
         totalGeoJson,
         lotGeoJson,
       }
@@ -227,6 +251,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         g: Number(g),
         e: Number(e || 0),
         scriptMode,
+        fontFamily,
         totalGeoJson,
         lotGeoJson,
         status: action === "generate" ? "GENERATED" : "DRAFT",
@@ -300,8 +325,11 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
                 {mfys.map((m) => <option key={m.id} value={m.name} />)}
               </datalist>
             </Field>
-            <Field label="Balansdagi tashkilot">
-              <Input value={organization} onChange={(e) => setOrganization(e.target.value)} placeholder="Namangan turistik-rekreatsion ... direksiyasi" />
+            <Field label="Balansda saqlovchi tashkilot">
+              <Input list="org-list" value={organization} onChange={(e) => setOrganization(e.target.value)} placeholder="Namangan turistik-rekreatsion ... direksiyasi" />
+              <datalist id="org-list">
+                {organizations.map((o) => <option key={o.id} value={o.name} />)}
+              </datalist>
             </Field>
           </CardContent>
         </Card>
@@ -318,7 +346,10 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
               <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="Sharshara-1" />
             </Field>
             <Field label="Loyiha maqsadi">
-              <Input value={projectPurpose} onChange={(e) => setProjectPurpose(e.target.value)} />
+              <Input list="purpose-list" value={projectPurpose} onChange={(e) => setProjectPurpose(e.target.value)} />
+              <datalist id="purpose-list">
+                {purposes.map((p) => <option key={p.id} value={p.name} />)}
+              </datalist>
             </Field>
             <Field label="Jami ro'yxatdan o'tgan maydon (gektar) *">
               <Input type="number" step="0.01" min="0" value={totalAreaHa} onChange={(e) => setTotalAreaHa(e.target.value)} placeholder="4.92" />
@@ -365,28 +396,39 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
           </CardContent>
         </Card>
 
-        {/* Hujjat alifbosi */}
+        {/* Hujjat ko'rinishi: alifbo va shrift */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Languages className="h-4 w-4 text-primary" /> Hujjat alifbosi
+              <Languages className="h-4 w-4 text-primary" /> Hujjat ko&apos;rinishi
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {(["LATIN", "CYRILLIC", "BOTH"] as ScriptMode[]).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setScriptMode(m)}
-                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                    scriptMode === m ? "border-primary bg-primary text-primary-foreground" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {SCRIPT_LABELS[m]}
-                </button>
-              ))}
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Alifbo</Label>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {(["LATIN", "CYRILLIC", "BOTH"] as ScriptMode[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setScriptMode(m)}
+                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                      scriptMode === m ? "border-primary bg-primary text-primary-foreground" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {SCRIPT_LABELS[m]}
+                  </button>
+                ))}
+              </div>
             </div>
+            <Field label="Shrift (Word hujjati uchun)">
+              <Select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)}>
+                {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+              </Select>
+              <p className="mt-1 text-xs text-slate-400" style={{ fontFamily }}>
+                Namuna: Boshlang&apos;ich narx 651 537 810 so&apos;m
+              </p>
+            </Field>
           </CardContent>
         </Card>
 

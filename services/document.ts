@@ -19,8 +19,9 @@ import { calculateStartingPrice } from "./calculation";
 import { formatInteger, formatHectare, formatDecimal, formatDate } from "@/lib/format";
 import { getImageSize } from "@/lib/image-size";
 import { latinToCyrillic } from "@/lib/translit";
+import { numberToWordsUz } from "@/lib/number-to-words";
 
-const FONT = "Times New Roman";
+let FONT = "Times New Roman";
 const BODY_SIZE = 28; // 14pt
 const MALUMOT_SIZE = 32; // 16pt
 const ACCENT = "1E40AF";
@@ -50,6 +51,7 @@ export interface DocxData {
   fDescription: string;
   legalReference: string;
   scriptMode?: string;
+  fontFamily?: string;
   documentNumber?: string;
 }
 
@@ -202,6 +204,21 @@ function buildTextContent(d: DocxData, tr: Tr): (Paragraph | Table)[] {
         }),
       ],
     }),
+
+    // Narx so'z bilan (matnda)
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 160 },
+      children: [
+        new TextRun({
+          text: tr(`(so'zda: ${numberToWordsUz(d.startingPrice)} so'm)`),
+          italics: true,
+          font: FONT,
+          size: 24,
+          color: "334155",
+        }),
+      ],
+    }),
   ];
 }
 
@@ -279,6 +296,7 @@ function headerBand(d: DocxData): Paragraph {
 }
 
 export async function generateDocx(d: DocxData, map?: MapImage): Promise<Buffer> {
+  FONT = d.fontFamily && d.fontFamily.trim() ? d.fontFamily.trim() : "Times New Roman";
   const mode = (d.scriptMode as string) || "LATIN";
   const identity: Tr = (s) => s;
   const toCyr: Tr = (s) => latinToCyrillic(s);

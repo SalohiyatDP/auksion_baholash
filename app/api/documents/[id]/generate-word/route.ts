@@ -53,6 +53,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       fDescription: doc.fDescription,
       legalReference: doc.legalReference,
       scriptMode: doc.scriptMode,
+      fontFamily: doc.fontFamily,
       documentNumber: doc.documentNumber,
     };
 

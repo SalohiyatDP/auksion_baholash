@@ -23,6 +23,7 @@ export const documentInputSchema = z.object({
     .min(0, { message: "Qo'shimcha xarajatlar manfiy bo'lmasligi kerak" })
     .default(0),
   scriptMode: z.enum(["LATIN", "CYRILLIC", "BOTH"]).optional().default("LATIN"),
+  fontFamily: z.string().optional().default("Times New Roman"),
   totalGeoJson: z.string().optional().nullable(),
   lotGeoJson: z.string().optional().nullable(),
   status: z.enum(["DRAFT", "GENERATED"]).optional().default("DRAFT"),

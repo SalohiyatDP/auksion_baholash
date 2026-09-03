@@ -213,6 +213,9 @@ model Document {
   // Yozuv alifbosi: LATIN | CYRILLIC | BOTH
   scriptMode     String         @default("LATIN")
 
+  // Hujjat shrifti (Word va preview uchun)
+  fontFamily     String         @default("Times New Roman")
+
   // Geografik ma'lumot (GeoJSON matn ko'rinishida) — SHP/KMZ/KML dan olingan
   totalGeoJson   String?        // umumiy maydon (qizil chiziq)
   lotGeoJson     String?        // lotlar (ko'k chiziq)
@@ -257,4 +260,26 @@ model DocumentFile {
 
   @@index([documentId, type])
   @@map("document_files")
+}
+
+
+
+// Balansda saqlovchi tashkilotlar (formada tanlash uchun)
+model Organization {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+// Loyiha maqsadlari (formada tanlash uchun)
+model ProjectPurpose {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_purposes")
 }

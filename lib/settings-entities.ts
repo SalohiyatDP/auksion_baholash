@@ -10,7 +10,9 @@ export type EntityKey =
   | "usage"
   | "area"
   | "engineering"
-  | "legal";
+  | "legal"
+  | "organization"
+  | "purpose";
 
 interface EntityConfig {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -64,6 +66,10 @@ const legalSchema = z.object({
   title: z.string().min(1),
   body: z.string().min(1),
   isActive: z.boolean().optional().default(true),
+});
+
+const nameSchema = z.object({
+  name: z.string().min(1),
 });
 
 export const ENTITIES: Record<EntityKey, EntityConfig> = {
@@ -134,6 +140,18 @@ export const ENTITIES: Record<EntityKey, EntityConfig> = {
     schema: legalSchema,
     toData: (i) => ({ title: i.title, body: i.body, isActive: i.isActive ?? true }),
     findManyArgs: { orderBy: { id: "asc" } },
+  },
+  organization: {
+    delegate: prisma.organization,
+    schema: nameSchema,
+    toData: (i) => ({ name: i.name }),
+    findManyArgs: { orderBy: { name: "asc" } },
+  },
+  purpose: {
+    delegate: prisma.projectPurpose,
+    schema: nameSchema,
+    toData: (i) => ({ name: i.name }),
+    findManyArgs: { orderBy: { name: "asc" } },
   },
 };
 
