@@ -1,24 +1,37 @@
-// YerAuksion — ISPmanager / Phusion Passenger uchun maxsus Next.js server.
-// Panel "node server.js" buyrug'i bilan ishga tushiradi va PORT ni o'zi beradi.
-// Shu sabab 3000 portга bog'lanmaymiz — panel bergan portда ishlaymiz (EADDRINUSE oldi olinadi).
+// YerAuksion — ISPmanager (Docker'siz) uchun Node.js kirish (startup) fayli.
+// Panel "node server.js" bilan ishga tushiradi va bo'sh TCP portni PORT env orqali beradi.
+// Nginx/Apache shu portga (127.0.0.1) proxy qiladi — shuning uchun 0.0.0.0 ga bog'lanamiz
+// (faqat IPv6 ga bog'lanib qolmaslik uchun; aks holda 502 Bad Gateway chiqadi).
 
 const { createServer } = require("http");
+const { parse } = require("url");
 const next = require("next");
 
-const app = next({ dev: false });
-const handle = app.getRequestHandler();
+const port = parseInt(process.env.PORT || "3000", 10);
+const hostname = process.env.HOST || "0.0.0.0";
 
-// Passenger/panel PORT ni beradi. Bo'lmasa 3000.
-const port = process.env.PORT || 3000;
+// Production rejim (panelda berilmagan bo'lsa ham)
+process.env.NODE_ENV = process.env.NODE_ENV || "production";
+
+const app = next({ dev: false, hostname, port });
+const handle = app.getRequestHandler();
 
 app
   .prepare()
   .then(() => {
-    createServer((req, res) => handle(req, res)).listen(port, () => {
-      console.log(`YerAuksion tayyor — port: ${port}`);
+    createServer((req, res) => {
+      try {
+        handle(req, res, parse(req.url, true));
+      } catch (err) {
+        console.error("So'rovni qayta ishlashda xatolik:", err);
+        res.statusCode = 500;
+        res.end("Ichki xatolik");
+      }
+    }).listen(port, hostname, () => {
+      console.log(`> YerAuksion tayyor: http://${hostname}:${port}`);
     });
   })
   .catch((err) => {
-    console.error("Server ishga tushmadi:", err);
+    console.error("Next.js ishga tushmadi:", err);
     process.exit(1);
   });
