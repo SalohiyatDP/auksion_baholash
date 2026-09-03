@@ -11,6 +11,7 @@ interface GeoMapProps {
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
   height?: number;
+  tileType?: string;
 }
 
 const RED = "#D32F2F";
@@ -45,9 +46,10 @@ function FitBounds({ total, lot }: { total: any; lot: any }) {
   return null;
 }
 
-export function GeoMap({ totalGeoJson, lotGeoJson, height = 360 }: GeoMapProps) {
+export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite" }: GeoMapProps) {
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
+  const isChecked = (t: string) => tileType === t;
 
   const total = parse(totalGeoJson);
   const lot = parse(lotGeoJson);
@@ -68,18 +70,18 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360 }: GeoMapProps) 
   return (
     <div>
       <div className="overflow-hidden rounded-lg border">
-        <MapContainer center={[41.0, 71.6]} zoom={12} style={{ height, width: "100%" }} scrollWheelZoom>
+        <MapContainer key={tileType} center={[41.0, 71.6]} zoom={12} style={{ height, width: "100%" }} scrollWheelZoom>
           <LayersControl position="topright">
-            <LayersControl.BaseLayer name="Ko'cha xaritasi">
+            <LayersControl.BaseLayer checked={isChecked("osm")} name="Ko'cha xaritasi">
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
             </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer checked name="Sun'iy yo'ldosh">
+            <LayersControl.BaseLayer checked={isChecked("esri")} name="Sun'iy yo'ldosh (Esri)">
               <TileLayer
                 url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 attribution="&copy; Esri"
               />
             </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="Google sun'iy yo'ldosh">
+            <LayersControl.BaseLayer checked={isChecked("google_satellite")} name="Google sun'iy yo'ldosh">
               <TileLayer
                 url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
                 subdomains={["mt0", "mt1", "mt2", "mt3"]}
@@ -87,7 +89,7 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360 }: GeoMapProps) 
                 maxZoom={21}
               />
             </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="Google gibrid">
+            <LayersControl.BaseLayer checked={isChecked("google_hybrid")} name="Google gibrid">
               <TileLayer
                 url="https://{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}"
                 subdomains={["mt0", "mt1", "mt2", "mt3"]}
@@ -95,7 +97,7 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360 }: GeoMapProps) 
                 maxZoom={21}
               />
             </LayersControl.BaseLayer>
-            <LayersControl.BaseLayer name="Google ko'cha">
+            <LayersControl.BaseLayer checked={isChecked("google_streets")} name="Google ko'cha">
               <TileLayer
                 url="https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
                 subdomains={["mt0", "mt1", "mt2", "mt3"]}

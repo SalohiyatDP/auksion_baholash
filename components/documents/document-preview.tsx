@@ -31,6 +31,7 @@ export interface PreviewData {
   mapUrl?: string | null;
   scriptMode?: ScriptMode;
   fontFamily?: string;
+  mapTileType?: string;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
@@ -67,7 +68,7 @@ export function DocumentPreview({ data }: { data: PreviewData }) {
       {/* Xarita bo'limi (bir marta) */}
       <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 24, paddingTop: 18 }}>
         {data.totalGeoJson || data.lotGeoJson ? (
-          <GeoMap totalGeoJson={data.totalGeoJson} lotGeoJson={data.lotGeoJson} height={340} />
+          <GeoMap totalGeoJson={data.totalGeoJson} lotGeoJson={data.lotGeoJson} height={340} tileType={data.mapTileType} />
         ) : data.mapUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={data.mapUrl} alt="Xarita" style={{ maxWidth: "100%", maxHeight: 420, display: "block", margin: "0 auto", borderRadius: 8, border: "1px solid #e2e8f0" }} />

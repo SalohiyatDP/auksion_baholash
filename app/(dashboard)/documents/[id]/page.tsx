@@ -56,6 +56,7 @@ export default async function DocumentViewPage({
     mapUrl: hasMap ? `/api/documents/${doc.id}/map` : null,
     scriptMode: doc.scriptMode as "LATIN" | "CYRILLIC" | "BOTH",
     fontFamily: doc.fontFamily,
+    mapTileType: doc.mapTileType,
     totalGeoJson: doc.totalGeoJson,
     lotGeoJson: doc.lotGeoJson,
   };

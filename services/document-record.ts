@@ -34,6 +34,7 @@ export interface BuiltDocument {
   formula: string;
   scriptMode: string;
   fontFamily: string;
+  mapTileType: string;
   totalGeoJson: string | null;
   lotGeoJson: string | null;
 }
@@ -99,6 +100,7 @@ export async function buildDocumentData(input: DocumentInput): Promise<BuiltDocu
     formula: calc.formula,
     scriptMode: input.scriptMode ?? "LATIN",
     fontFamily: input.fontFamily ?? "Times New Roman",
+    mapTileType: input.mapTileType ?? "google_satellite",
     totalGeoJson: input.totalGeoJson ?? null,
     lotGeoJson: input.lotGeoJson ?? null,
   };

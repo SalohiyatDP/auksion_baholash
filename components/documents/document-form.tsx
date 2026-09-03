@@ -37,9 +37,18 @@ export interface DocumentFormInitial {
   hasMap?: boolean;
   scriptMode?: string;
   fontFamily?: string;
+  mapTileType?: string;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
+
+const TILE_OPTIONS = [
+  { value: "google_satellite", label: "Google sun'iy yo'ldosh" },
+  { value: "google_hybrid", label: "Google gibrid" },
+  { value: "esri", label: "Sun'iy yo'ldosh (Esri)" },
+  { value: "google_streets", label: "Google ko'cha" },
+  { value: "osm", label: "Ko'cha xaritasi (OSM)" },
+];
 
 const FONT_OPTIONS = [
   "Times New Roman",
@@ -92,6 +101,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
 
   const [scriptMode, setScriptMode] = React.useState<ScriptMode>((initial?.scriptMode as ScriptMode) ?? "LATIN");
   const [fontFamily, setFontFamily] = React.useState(initial?.fontFamily ?? "Times New Roman");
+  const [mapTileType, setMapTileType] = React.useState(initial?.mapTileType ?? "google_satellite");
   const [totalGeoJson, setTotalGeoJson] = React.useState<string | null>(initial?.totalGeoJson ?? null);
   const [lotGeoJson, setLotGeoJson] = React.useState<string | null>(initial?.lotGeoJson ?? null);
 
@@ -215,6 +225,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         mapUrl: mapPreview,
         scriptMode,
         fontFamily,
+        mapTileType,
         totalGeoJson,
         lotGeoJson,
       }
@@ -252,6 +263,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         e: Number(e || 0),
         scriptMode,
         fontFamily,
+        mapTileType,
         totalGeoJson,
         lotGeoJson,
         status: action === "generate" ? "GENERATED" : "DRAFT",
@@ -444,7 +456,12 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
               <GeoUpload label="Umumiy maydon" color="red" geojson={totalGeoJson} onChange={(g) => setTotalGeoJson(g)} />
               <GeoUpload label="Lotlar" color="blue" geojson={lotGeoJson} onChange={(g) => setLotGeoJson(g)} />
             </div>
-            <GeoMap totalGeoJson={totalGeoJson} lotGeoJson={lotGeoJson} height={320} />
+            <Field label="Xarita turi (preview va Word hujjati uchun bir xil)">
+              <Select value={mapTileType} onChange={(e) => setMapTileType(e.target.value)}>
+                {TILE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </Select>
+            </Field>
+            <GeoMap totalGeoJson={totalGeoJson} lotGeoJson={lotGeoJson} height={320} tileType={mapTileType} />
 
             <details className="rounded-lg border border-slate-200 p-3">
               <summary className="cursor-pointer text-sm text-slate-500">

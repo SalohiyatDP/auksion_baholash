@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
         legalReference: built.legalReference,
         scriptMode: built.scriptMode,
         fontFamily: built.fontFamily,
+        mapTileType: built.mapTileType,
         totalGeoJson: built.totalGeoJson,
         lotGeoJson: built.lotGeoJson,
         status: input.status ?? "DRAFT",

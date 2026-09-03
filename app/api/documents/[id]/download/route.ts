@@ -23,7 +23,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     // HAR DOIM yangidan generatsiya qilamiz — shunda xarita/shrift/alifbo o'zgarishlari aks etadi
     // (eski keshlangan fayl qaytarilmaydi).
     let map: MapImage | undefined;
-    const staticMap = await generateStaticMap(doc.totalGeoJson, doc.lotGeoJson);
+    const staticMap = await generateStaticMap(
+      doc.totalGeoJson,
+      doc.lotGeoJson,
+      doc.mapTileType as any
+    );
     if (staticMap) {
       map = staticMap;
     } else {

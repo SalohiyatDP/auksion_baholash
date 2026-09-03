@@ -24,6 +24,10 @@ export const documentInputSchema = z.object({
     .default(0),
   scriptMode: z.enum(["LATIN", "CYRILLIC", "BOTH"]).optional().default("LATIN"),
   fontFamily: z.string().optional().default("Times New Roman"),
+  mapTileType: z
+    .enum(["google_satellite", "google_hybrid", "google_streets", "esri", "osm"])
+    .optional()
+    .default("google_satellite"),
   totalGeoJson: z.string().optional().nullable(),
   lotGeoJson: z.string().optional().nullable(),
   status: z.enum(["DRAFT", "GENERATED"]).optional().default("DRAFT"),

@@ -220,6 +220,9 @@ model Document {
   totalGeoJson   String?        // umumiy maydon (qizil chiziq)
   lotGeoJson     String?        // lotlar (ko'k chiziq)
 
+  // Xarita qatlami turi: google_satellite | google_hybrid | google_streets | esri | osm
+  mapTileType    String         @default("google_satellite")
+
   status         DocumentStatus @default(DRAFT)
 
   createdById    String
