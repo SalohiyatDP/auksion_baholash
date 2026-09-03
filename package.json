@@ -11,6 +11,7 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:seed": "prisma db seed",
+    "seed": "prisma db seed",
     "deploy:db": "prisma db push --skip-generate && prisma db seed",
     "test": "vitest run"
   },
