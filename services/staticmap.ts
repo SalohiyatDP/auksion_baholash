@@ -44,9 +44,13 @@ export async function generateStaticMap(
     const mod: any = await import("staticmaps");
     const StaticMaps = mod.default || mod;
 
+    // Keng (2:1) format — interaktiv preview'ga o'xshash kadr (uchastkalar kattaroq ko'rinadi).
+    // paddingX/Y — poligonlar chetga yopishmasligi uchun kichik hoshiya.
     const map = new StaticMaps({
-      width: 1000,
-      height: 800,
+      width: 1280,
+      height: 640,
+      paddingX: 48,
+      paddingY: 48,
       tileUrl: ESRI_SATELLITE,
       tileSize: 256,
     });
@@ -61,7 +65,7 @@ export async function generateStaticMap(
         const first = coords[0];
         const last = coords[coords.length - 1];
         if (first[0] !== last[0] || first[1] !== last[1]) coords.push(first);
-        map.addPolygon({ coords, color: stroke, fill, width: 4 });
+        map.addPolygon({ coords, color: stroke, fill, width: 5 });
       }
     };
 
