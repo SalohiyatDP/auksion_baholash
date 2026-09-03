@@ -167,7 +167,9 @@ hujjatlarning hisob-kitobi o'zgarmaydi.
 cp .env.prod.example .env   # qiymatlarni to'ldiring
 docker compose -f docker-compose.prod.yml up -d --build
 ```
-To'liq bosqichma-bosqich qo'llanma: [`DEPLOY.md`](./DEPLOY.md).
+To'liq bosqichma-bosqich qo'llanma:
+- **Docker'li server (VPS):** [`DEPLOY.md`](./DEPLOY.md)
+- **Umumiy hosting (ISPmanager, Docker'siz):** [`DEPLOY_HOSTING.md`](./DEPLOY_HOSTING.md)
 
 ## 🗺 Xarita: SHP / KMZ / KML / GeoJSON (KALITSIZ)
 
