@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { generateDocx, type DocxData, type MapImage } from "@/services/document";
+import { generateStaticMap } from "@/services/staticmap";
 import { storage } from "@/services/storage";
 import { fail, handleError } from "@/lib/api";
 
@@ -26,12 +27,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     } else {
       // Fayl yo'q bo'lsa — darhol generatsiya qilamiz
       let map: MapImage | undefined;
-      const mapFile = doc.files.find((f) => f.type === "MAP_IMAGE");
-      if (mapFile) {
-        try {
-          map = { buffer: await storage.read(mapFile.path), mime: mapFile.mime };
-        } catch {
-          /* rasmsiz */
+      const staticMap = await generateStaticMap(doc.totalGeoJson, doc.lotGeoJson);
+      if (staticMap) {
+        map = staticMap;
+      } else {
+        const mapFile = doc.files.find((f) => f.type === "MAP_IMAGE");
+        if (mapFile) {
+          try {
+            map = { buffer: await storage.read(mapFile.path), mime: mapFile.mime };
+          } catch {
+            /* rasmsiz */
+          }
         }
       }
       const data: DocxData = {
@@ -49,6 +55,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         tDescription: doc.tDescription,
         fDescription: doc.fDescription,
         legalReference: doc.legalReference,
+        scriptMode: doc.scriptMode,
+        documentNumber: doc.documentNumber,
       };
       buffer = await generateDocx(data, map);
       await storage.save(`docs/${doc.id}.docx`, buffer);

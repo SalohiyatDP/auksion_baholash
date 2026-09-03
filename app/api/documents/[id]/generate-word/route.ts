@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { generateDocx, type DocxData, type MapImage } from "@/services/document";
+import { generateStaticMap } from "@/services/staticmap";
 import { storage } from "@/services/storage";
 import { ok, fail, handleError } from "@/lib/api";
 
@@ -19,15 +20,20 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return fail("Ruxsat yo'q", 403);
     }
 
-    // Xarita rasmini yuklaymiz (mavjud bo'lsa)
+    // Xarita: avval SHP/KMZ geometriyasidan Google Static Map, aks holda yuklangan rasm
     let map: MapImage | undefined;
-    const mapFile = doc.files.find((f) => f.type === "MAP_IMAGE");
-    if (mapFile) {
-      try {
-        const buffer = await storage.read(mapFile.path);
-        map = { buffer, mime: mapFile.mime };
-      } catch {
-        /* rasm o'qib bo'lmadi — rasmsiz davom etamiz */
+    const staticMap = await generateStaticMap(doc.totalGeoJson, doc.lotGeoJson);
+    if (staticMap) {
+      map = staticMap;
+    } else {
+      const mapFile = doc.files.find((f) => f.type === "MAP_IMAGE");
+      if (mapFile) {
+        try {
+          const buffer = await storage.read(mapFile.path);
+          map = { buffer, mime: mapFile.mime };
+        } catch {
+          /* rasmsiz davom etamiz */
+        }
       }
     }
 
@@ -46,6 +52,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       tDescription: doc.tDescription,
       fDescription: doc.fDescription,
       legalReference: doc.legalReference,
+      scriptMode: doc.scriptMode,
+      documentNumber: doc.documentNumber,
     };
 
     const buffer = await generateDocx(data, map);

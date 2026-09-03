@@ -18,15 +18,18 @@
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
+    "@tmcw/togeojson": "^5.8.1",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "docx": "^9.1.1",
     "jose": "^5.9.6",
+    "jszip": "^3.10.1",
     "lucide-react": "^0.469.0",
     "next": "15.1.4",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "shpjs": "^4.0.4",
     "tailwind-merge": "^2.6.0",
     "zod": "^3.24.1"
   },

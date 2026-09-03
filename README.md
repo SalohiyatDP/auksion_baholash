@@ -160,10 +160,45 @@ hujjatlarning hisob-kitobi o'zgarmaydi.
 
 ---
 
-## 🚧 v1 cheklovlari va keyingi bosqichlar
+## 🗺 Xarita: SHP / KMZ / KML / GeoJSON + Google Maps
 
-- Koeffitsiyentlar sahifasi hozircha **ko'rish** rejimida; to'liq UI-CRUD keyingi versiyada (hozir seed/baza orqali).
-- Kelajakda ko'zda tutilgan (arxitektura tayyor): PDF eksport, GIS (SHP/KML/GeoJSON), ERI (elektron raqamli imzo), ko'p viloyat/shablon.
+Hujjat formasida ikkita geografik yuklash mavjud:
+- **Umumiy maydon** — xaritada **qizil** chiziq bilan
+- **Lotlar** — xaritada **ko'k** chiziq bilan
+
+Qo'llab-quvvatlanadigan formatlar: **SHP** (`.zip` shaklida), **KMZ**, **KML**, **GeoJSON**. Fayllar
+brauzerda GeoJSON ga o'giriladi, interaktiv **Google xaritada** ko'rsatiladi, va hujjat (`.docx`) ga
+**Google Static Maps** orqali qizil/ko'k chiziqli rasm sifatida joylanadi.
+
+### Google Maps kalitini sozlash
+
+1. [Google Cloud Console](https://console.cloud.google.com) da **Maps JavaScript API** va **Maps Static API** ni yoqing.
+2. API kalit yarating.
+3. Kalitni bering (ikki usuldan biri):
+   - `docker-compose.yml` yonida `.env` fayl yarating:
+     ```
+     GOOGLE_MAPS_API_KEY=SIZNING_KALITINGIZ
+     ```
+   - yoki muhit o'zgaruvchisi sifatida `export GOOGLE_MAPS_API_KEY=...` qilib `docker compose up` ni ishga tushiring.
+
+> Kalit bo'lmasa ham ilova ishlaydi — faqat interaktiv xarita va hujjatdagi static map ko'rinmaydi
+> (bu holda tayyor rasmni qo'lda yuklash mumkin).
+
+## 🔤 Alifbo (Lotin / Kirill)
+
+Har bir hujjat uchun alifbo tanlanadi: **Lotin**, **Kirill** yoki **Ikkalasi**. Tanlov ham web
+ko'rinishga, ham generatsiya qilingan `.docx` ga ta'sir qiladi. "Ikkalasi" tanlanganda hujjat lotin
+va kirill matnlarini ketma-ket ko'rsatadi.
+
+## ⚙️ Koeffitsiyentlarni tahrirlash
+
+Administrator **Sozlamalar** bo'limida barcha koeffitsiyent jadvallarini (T, B, F, M, G) va huquqiy
+asosni to'g'ridan-to'g'ri qo'shishi, tahrirlashi va o'chirishi mumkin. O'zgarishlar faqat yangi
+hujjatlarga ta'sir qiladi (snapshot tufayli eski hujjatlar o'zgarmaydi).
+
+## 🚧 Keyingi bosqichlar
+
+- Kelajakda ko'zda tutilgan (arxitektura tayyor): PDF eksport, ERI (elektron raqamli imzo), ko'p viloyat/shablon.
 - Docker image demo uchun `prisma db push` ishlatadi; ishlab chiqarishda `prisma migrate` bilan migratsiya fayllari yaratish tavsiya etiladi.
 
 ---

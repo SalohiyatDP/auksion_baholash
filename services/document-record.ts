@@ -32,6 +32,9 @@ export interface BuiltDocument {
   fDescription: string;
   legalReference: string;
   formula: string;
+  scriptMode: string;
+  totalGeoJson: string | null;
+  lotGeoJson: string | null;
 }
 
 /**
@@ -93,6 +96,9 @@ export async function buildDocumentData(input: DocumentInput): Promise<BuiltDocu
     fDescription: `${usage.name} (kod ${usage.code})`,
     legalReference: legal?.body ?? "",
     formula: calc.formula,
+    scriptMode: input.scriptMode ?? "LATIN",
+    totalGeoJson: input.totalGeoJson ?? null,
+    lotGeoJson: input.lotGeoJson ?? null,
   };
 }
 

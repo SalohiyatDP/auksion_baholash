@@ -24,6 +24,9 @@ enum DocumentStatus {
 enum FileType {
   MAP_IMAGE
   GENERATED_DOCX
+  TOTAL_GEO
+  LOT_GEO
+  STATIC_MAP
 }
 
 model User {
@@ -206,6 +209,13 @@ model Document {
 
   // Huquqiy asos matni — snapshot
   legalReference String         @default("")
+
+  // Yozuv alifbosi: LATIN | CYRILLIC | BOTH
+  scriptMode     String         @default("LATIN")
+
+  // Geografik ma'lumot (GeoJSON matn ko'rinishida) — SHP/KMZ/KML dan olingan
+  totalGeoJson   String?        // umumiy maydon (qizil chiziq)
+  lotGeoJson     String?        // lotlar (ko'k chiziq)
 
   status         DocumentStatus @default(DRAFT)
 

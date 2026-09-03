@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Save, FileText, Eye, EyeOff, Calculator, MapPin, Layers, Coins, Building2 } from "lucide-react";
+import { Save, FileText, Eye, EyeOff, Calculator, MapPin, Layers, Coins, Building2, Languages } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { MapUpload } from "./map-upload";
+import { GeoUpload } from "./geo-upload";
+import { GeoMap } from "./geo-map";
 import { DocumentPreview, type PreviewData } from "./document-preview";
 import { apiFetch } from "@/lib/client";
 import { formatHectare, formatSom } from "@/lib/format";
+import { SCRIPT_LABELS, type ScriptMode } from "@/lib/translit";
 
 interface Option { id: number; name: string }
 interface UsageOption { id: number; code: string; name: string; coefficientF: number }
@@ -32,6 +35,9 @@ export interface DocumentFormInitial {
   g?: number;
   e?: number;
   hasMap?: boolean;
+  scriptMode?: string;
+  totalGeoJson?: string | null;
+  lotGeoJson?: string | null;
 }
 
 interface CalcResponse {
@@ -69,6 +75,10 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
   const [landUsageCode, setLandUsageCode] = React.useState(initial?.landUsageCode ?? "");
   const [g, setG] = React.useState(initial?.g != null ? String(initial.g) : "1.0");
   const [e, setE] = React.useState(initial?.e != null ? String(initial.e) : "0");
+
+  const [scriptMode, setScriptMode] = React.useState<ScriptMode>((initial?.scriptMode as ScriptMode) ?? "LATIN");
+  const [totalGeoJson, setTotalGeoJson] = React.useState<string | null>(initial?.totalGeoJson ?? null);
+  const [lotGeoJson, setLotGeoJson] = React.useState<string | null>(initial?.lotGeoJson ?? null);
 
   const [mapFile, setMapFile] = React.useState<File | null>(null);
   const [mapPreview, setMapPreview] = React.useState<string | null>(
@@ -180,6 +190,9 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         legalReference: legalText,
         formula: calc.result.formula,
         mapUrl: mapPreview,
+        scriptMode,
+        totalGeoJson,
+        lotGeoJson,
       }
     : null;
 
@@ -213,6 +226,9 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         landUsageCode,
         g: Number(g),
         e: Number(e || 0),
+        scriptMode,
+        totalGeoJson,
+        lotGeoJson,
         status: action === "generate" ? "GENERATED" : "DRAFT",
       };
 
@@ -349,22 +365,60 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
           </CardContent>
         </Card>
 
-        {/* Xarita */}
+        {/* Hujjat alifbosi */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Building2 className="h-4 w-4 text-primary" /> Xarita ko&apos;chirmasi
+              <Languages className="h-4 w-4 text-primary" /> Hujjat alifbosi
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <MapUpload
-              previewUrl={mapPreview}
-              onSelect={(f) => {
-                setMapFile(f);
-                if (!f) { setMapPreview(null); setRemoveMap(true); }
-                else setRemoveMap(false);
-              }}
-            />
+            <div className="flex flex-wrap gap-2">
+              {(["LATIN", "CYRILLIC", "BOTH"] as ScriptMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setScriptMode(m)}
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                    scriptMode === m ? "border-primary bg-primary text-primary-foreground" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  {SCRIPT_LABELS[m]}
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Xarita: SHP/KMZ + Google */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-4 w-4 text-primary" /> Xarita (SHP / KMZ)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <GeoUpload label="Umumiy maydon" color="red" geojson={totalGeoJson} onChange={(g) => setTotalGeoJson(g)} />
+              <GeoUpload label="Lotlar" color="blue" geojson={lotGeoJson} onChange={(g) => setLotGeoJson(g)} />
+            </div>
+            <GeoMap totalGeoJson={totalGeoJson} lotGeoJson={lotGeoJson} height={320} />
+
+            <details className="rounded-lg border border-slate-200 p-3">
+              <summary className="cursor-pointer text-sm text-slate-500">
+                Yoki tayyor xarita rasmini yuklash (JPG/PNG)
+              </summary>
+              <div className="mt-3">
+                <MapUpload
+                  previewUrl={mapPreview}
+                  onSelect={(f) => {
+                    setMapFile(f);
+                    if (!f) { setMapPreview(null); setRemoveMap(true); }
+                    else setRemoveMap(false);
+                  }}
+                />
+              </div>
+            </details>
           </CardContent>
         </Card>
       </div>

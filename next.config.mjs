@@ -10,6 +10,18 @@ const nextConfig = {
       bodySizeLimit: "25mb",
     },
   },
+  webpack: (config) => {
+    // shpjs/togeojson kabi kutubxonalar uchun brauzerda node core modullarini o'chirish
+    config.resolve = config.resolve || {};
+    config.resolve.fallback = {
+      ...(config.resolve.fallback || {}),
+      fs: false,
+      path: false,
+      stream: false,
+      zlib: false,
+    };
+    return config;
+  },
 };
 
 export default nextConfig;

@@ -80,6 +80,9 @@ export async function POST(req: NextRequest) {
         tDescription: built.tDescription,
         fDescription: built.fDescription,
         legalReference: built.legalReference,
+        scriptMode: built.scriptMode,
+        totalGeoJson: built.totalGeoJson,
+        lotGeoJson: built.lotGeoJson,
         status: input.status ?? "DRAFT",
         createdById: session.id,
         calculation: {

@@ -54,6 +54,9 @@ export default async function DocumentViewPage({
     legalReference: doc.legalReference,
     formula,
     mapUrl: hasMap ? `/api/documents/${doc.id}/map` : null,
+    scriptMode: doc.scriptMode as "LATIN" | "CYRILLIC" | "BOTH",
+    totalGeoJson: doc.totalGeoJson,
+    lotGeoJson: doc.lotGeoJson,
   };
 
   return (
