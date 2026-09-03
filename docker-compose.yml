@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: yerauksion-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: yerauksion
+      POSTGRES_PASSWORD: yerauksion
+      POSTGRES_DB: yerauksion
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yerauksion -d yerauksion"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yerauksion-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: "postgresql://yerauksion:yerauksion@db:5432/yerauksion?schema=public"
+      JWT_SECRET: "docker-demo-secret-change-in-production-please-1234567890"
+      STORAGE_DIR: "/app/storage"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+      SEED_ADMIN_EMAIL: "admin@yerauksion.uz"
+      SEED_ADMIN_PASSWORD: "admin123"
+      SEED_OPERATOR_EMAIL: "operator@yerauksion.uz"
+      SEED_OPERATOR_PASSWORD: "operator123"
+      NODE_ENV: "production"
+    ports:
+      - "3000:3000"
+    volumes:
+      - storage:/app/storage
+
+volumes:
+  pgdata:
+  storage:

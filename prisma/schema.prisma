@@ -1,0 +1,250 @@
+// YerAuksion — Ma'lumotlar bazasi sxemasi
+// PostgreSQL + Prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+}
+
+enum DocumentStatus {
+  DRAFT
+  GENERATED
+  ARCHIVED
+}
+
+enum FileType {
+  MAP_IMAGE
+  GENERATED_DOCX
+}
+
+model User {
+  id           String     @id @default(cuid())
+  fullName     String
+  email        String     @unique
+  username     String     @unique
+  passwordHash String
+  role         Role       @default(OPERATOR)
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  documents    Document[]
+
+  @@map("users")
+}
+
+model Region {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  createdAt DateTime   @default(now())
+
+  districts District[]
+  documents Document[]
+
+  @@map("regions")
+}
+
+model District {
+  id         Int       @id @default(autoincrement())
+  regionId   Int
+  region     Region    @relation(fields: [regionId], references: [id], onDelete: Cascade)
+  name       String
+  createdAt  DateTime  @default(now())
+
+  mfys                 Mfy[]
+  territoryCategories  TerritoryCategory[]
+  taxRates             TaxRate[]
+  documents            Document[]
+
+  @@unique([regionId, name])
+  @@map("districts")
+}
+
+model Mfy {
+  id         Int      @id @default(autoincrement())
+  districtId Int
+  district   District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  name       String
+  createdAt  DateTime @default(now())
+
+  @@unique([districtId, name])
+  @@map("mfys")
+}
+
+// T — hudud toifa koeffitsiyenti
+model TerritoryCategory {
+  id           Int      @id @default(autoincrement())
+  regionId     Int
+  districtId   Int
+  district     District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  category     Int      // 1..5
+  coefficientT Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([districtId])
+  @@map("territory_categories")
+}
+
+// B — yer solig'i stavkasi (yillik), rateB = annualRate / 10000 (so'm/kv.m)
+model TaxRate {
+  id            Int       @id @default(autoincrement())
+  regionId      Int
+  districtId    Int
+  district      District  @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  baseAmount    Float     // bazaviy miqdor
+  coefficient   Float     // koeffitsiyent (0,5..2)
+  annualRate    Float     // yillik stavka = baseAmount * coefficient
+  rateB         Float     // = annualRate / 10000 (formulada ishlatiladigan B)
+  year          Int
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([districtId, year])
+  @@map("tax_rates")
+}
+
+// F — ruxsat etilgan foydalanish turi koeffitsiyenti
+model LandUsageCoefficient {
+  id           Int      @id @default(autoincrement())
+  code         String   @unique // masalan "7.0"
+  name         String
+  coefficientF Float
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("land_usage_coefficients")
+}
+
+// M — maydon bo'yicha kamaytiruvchi koeffitsiyent
+// Chegara mantig'i: quyi (minArea) inklyuziv; oxirgi chekli band yuqori chegarasi inklyuziv,
+// qolganlari uchun yuqori chegara eksklyuziv (Excel IF mantig'iga aynan mos).
+model AreaCoefficient {
+  id           Int      @id @default(autoincrement())
+  minArea      Float    // kv.m (inklyuziv)
+  maxArea      Float?   // kv.m (null = cheksiz)
+  coefficientM Float
+  description  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("area_coefficients")
+}
+
+// G — muhandislik-kommunikatsiya koeffitsiyenti (default qiymatlar)
+model EngineeringCoefficient {
+  id           Int      @id @default(autoincrement())
+  name         String
+  coefficientG Float
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("engineering_coefficients")
+}
+
+// Huquqiy asos matnlari
+model LegalReference {
+  id        Int      @id @default(autoincrement())
+  title     String
+  body      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("legal_references")
+}
+
+model Document {
+  id             String         @id @default(cuid())
+  documentNumber String         @unique
+
+  // Hudud ma'lumotlari
+  regionId       Int
+  region         Region         @relation(fields: [regionId], references: [id])
+  districtId     Int
+  district       District       @relation(fields: [districtId], references: [id])
+  mfy            String
+
+  // Yer uchastkasi ma'lumotlari
+  projectName    String
+  organization   String         @default("")
+  projectPurpose String         @default("")
+  totalAreaHa    Float
+  lotAreaM2      Float
+  lotAreaHa      Float
+
+  // Foydalanish turi (F manbasi) — snapshot uchun tavsif ham saqlanadi
+  landUsageCode  String?
+  landUsageName  String?
+
+  // Hisoblash koeffitsiyentlari — YARATILGAN PAYTDAGI SNAPSHOT
+  s              Float
+  t              Float
+  b              Float
+  g              Float
+  f              Float
+  m              Float
+  e              Float
+  startingPrice  Float
+
+  // Toifa/foydalanish tavsiflari (hujjat jadvali uchun snapshot)
+  tDescription   String         @default("")
+  fDescription   String         @default("")
+
+  // Huquqiy asos matni — snapshot
+  legalReference String         @default("")
+
+  status         DocumentStatus @default(DRAFT)
+
+  createdById    String
+  createdBy      User           @relation(fields: [createdById], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  calculation    DocumentCalculation?
+  files          DocumentFile[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("documents")
+}
+
+model DocumentCalculation {
+  id            String   @id @default(cuid())
+  documentId    String   @unique
+  document      Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  formulaString String
+  result        Float
+  breakdownJson String   // JSON matn ko'rinishida
+  createdAt     DateTime @default(now())
+
+  @@map("document_calculations")
+}
+
+model DocumentFile {
+  id           String   @id @default(cuid())
+  documentId   String
+  document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  type         FileType
+  path         String
+  originalName String
+  size         Int
+  mime         String
+  createdAt    DateTime @default(now())
+
+  @@index([documentId, type])
+  @@map("document_files")
+}

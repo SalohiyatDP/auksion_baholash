@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+storage
+*.md
+Dockerfile
+.dockerignore
+docker-compose.yml
+.env
+.env*.local
+coverage
+Поп_тумани_ер_участкаси_бўйича_ҳокимга_хат.docx
+формула.xlsx
+_analysis
