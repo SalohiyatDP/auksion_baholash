@@ -1,4 +1,4 @@
-import { extractRings, simplifyRing, type Ring } from "@/lib/geo/geojson";
+import { extractFeatures, simplifyRing, ringCentroid, type Ring, type GeoFeatureInfo } from "@/lib/geo/geojson";
 
 // Hujjat uchun xarita rasmini KALITSIZ shakllantiradi (`staticmaps` + tayl serverlar).
 // Umumiy maydon — QIZIL, lotlar — KO'K. Qatlam turi foydalanuvchi tanloviga mos.
@@ -28,10 +28,10 @@ export interface StaticMapResult {
   mime: string;
 }
 
-function collectRings(geojsonStr?: string | null): Ring[] {
+function collectFeatures(geojsonStr?: string | null): GeoFeatureInfo[] {
   if (!geojsonStr) return [];
   try {
-    return extractRings(JSON.parse(geojsonStr));
+    return extractFeatures(JSON.parse(geojsonStr));
   } catch {
     return [];
   }
@@ -57,9 +57,9 @@ export async function generateStaticMap(
 ): Promise<StaticMapResult | null> {
   // Static rasm yuqori aniqlikda (1500px) — chiziqni ko'rinarli qilish uchun 2x
   const strokeW = Math.max(1, Math.round(lineWidth * 2));
-  const totalRings = collectRings(totalGeoJson);
-  const lotRings = collectRings(lotGeoJson);
-  if (totalRings.length === 0 && lotRings.length === 0) return null;
+  const totalFeatures = collectFeatures(totalGeoJson);
+  const lotFeatures = collectFeatures(lotGeoJson);
+  if (totalFeatures.length === 0 && lotFeatures.length === 0) return null;
 
   const mod: any = await import("staticmaps");
   const StaticMaps = mod.default || mod;
@@ -79,21 +79,45 @@ export async function generateStaticMap(
       },
     });
 
-    const addRings = (rings: Ring[], stroke: string, fill: string) => {
-      for (const ring of rings) {
-        if (ring.length < 3) continue;
-        const simplified = simplifyRing(ring, 400);
-        const coords = simplified.map(([lat, lng]) => [lng, lat] as [number, number]);
-        const first = coords[0];
-        const last = coords[coords.length - 1];
-        if (first[0] !== last[0] || first[1] !== last[1]) coords.push(first);
-        map.addPolygon({ coords, color: stroke, fill, width: strokeW });
+    const drawFeatures = (features: GeoFeatureInfo[], stroke: string, fill: string, textColor: string) => {
+      for (const feat of features) {
+        let biggest: Ring | null = null;
+        for (const ring of feat.rings) {
+          if (ring.length < 3) continue;
+          const simplified = simplifyRing(ring, 400);
+          const coords = simplified.map(([lat, lng]) => [lng, lat] as [number, number]);
+          const first = coords[0];
+          const last = coords[coords.length - 1];
+          if (first[0] !== last[0] || first[1] !== last[1]) coords.push(first);
+          map.addPolygon({ coords, color: stroke, fill, width: strokeW });
+          if (!biggest || ring.length > biggest.length) biggest = ring;
+        }
+        // Har maydon/lot markazida gektar yozuvi
+        if (feat.areaHa != null && biggest) {
+          const c = ringCentroid(biggest); // [lat, lng]
+          if (c) {
+            try {
+              map.addText({
+                coord: [c[1], c[0]], // [lng, lat]
+                text: `${feat.areaHa} ga`,
+                size: 30,
+                color: "#000000", // kontur (o'qilishi uchun)
+                width: 4,
+                fill: textColor, // matn rangi (oq)
+                font: "bold sans-serif",
+                anchor: "middle",
+              });
+            } catch {
+              /* addText qo'llab-quvvatlanmasa — yozuvsiz davom etamiz */
+            }
+          }
+        }
       }
     };
 
     // Umumiy maydon (qizil) — xarita shunga nisbatan yaqinlashtiriladi (avval qo'shiladi)
-    addRings(totalRings, RED_STROKE, RED_FILL);
-    addRings(lotRings, BLUE_STROKE, BLUE_FILL);
+    drawFeatures(totalFeatures, RED_STROKE, RED_FILL, "#ffffff");
+    drawFeatures(lotFeatures, BLUE_STROKE, BLUE_FILL, "#ffffff");
 
     if (view && Number.isFinite(view.lat) && Number.isFinite(view.lng) && Number.isFinite(view.zoom)) {
       // Preview'dan saqlangan markaz va masshtab (staticmaps: [lon, lat], integer zoom)

@@ -76,3 +76,43 @@ export function ringsCenter(rings: Ring[]): [number, number] | null {
   if (n === 0) return null;
   return [sumLat / n, sumLng / n];
 }
+
+
+export interface GeoFeatureInfo {
+  rings: Ring[];
+  areaHa: number | null;
+}
+
+/**
+ * Har bir feature'ni alohida (halqalari + areaHa xossasi bilan) qaytaradi.
+ * Bu chizmada har bir maydon/lotni o'z gektari bilan belgilash uchun ishlatiladi.
+ */
+export function extractFeatures(geojson: any): GeoFeatureInfo[] {
+  if (!geojson) return [];
+  let feats: any[] = [];
+  if (geojson.type === "FeatureCollection") feats = geojson.features || [];
+  else if (geojson.type === "Feature") feats = [geojson];
+  else if (geojson.type) feats = [{ type: "Feature", geometry: geojson, properties: {} }];
+
+  const out: GeoFeatureInfo[] = [];
+  for (const f of feats) {
+    const rings = extractRings({ type: "Feature", geometry: f.geometry });
+    if (rings.length === 0) continue;
+    const raw = f.properties ? f.properties.areaHa : null;
+    const areaHa = raw != null && raw !== "" && !Number.isNaN(Number(raw)) ? Number(raw) : null;
+    out.push({ rings, areaHa });
+  }
+  return out;
+}
+
+/** Halqaning markaziy nuqtasi [lat, lng] */
+export function ringCentroid(ring: Ring): [number, number] | null {
+  if (!ring.length) return null;
+  let lat = 0;
+  let lng = 0;
+  for (const [la, ln] of ring) {
+    lat += la;
+    lng += ln;
+  }
+  return [lat / ring.length, lng / ring.length];
+}

@@ -123,10 +123,26 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
           </LayersControl>
 
           {total && (
-            <GeoJSON key={`t-${totalGeoJson?.length ?? 0}-${lineWidth}`} data={total} style={{ color: RED, weight: lineWidth, fillColor: RED, fillOpacity: 0.12 }} />
+            <GeoJSON
+              key={`t-${totalGeoJson?.length ?? 0}-${lineWidth}`}
+              data={total}
+              style={{ color: RED, weight: lineWidth, fillColor: RED, fillOpacity: 0.12 }}
+              onEachFeature={(f: any, layer: any) => {
+                const a = f?.properties?.areaHa;
+                if (a != null && a !== "") layer.bindTooltip(`${a} ga`, { permanent: true, direction: "center", className: "area-label" });
+              }}
+            />
           )}
           {lot && (
-            <GeoJSON key={`l-${lotGeoJson?.length ?? 0}-${lineWidth}`} data={lot} style={{ color: BLUE, weight: lineWidth, fillColor: BLUE, fillOpacity: 0.15 }} />
+            <GeoJSON
+              key={`l-${lotGeoJson?.length ?? 0}-${lineWidth}`}
+              data={lot}
+              style={{ color: BLUE, weight: lineWidth, fillColor: BLUE, fillOpacity: 0.15 }}
+              onEachFeature={(f: any, layer: any) => {
+                const a = f?.properties?.areaHa;
+                if (a != null && a !== "") layer.bindTooltip(`${a} ga`, { permanent: true, direction: "center", className: "area-label" });
+              }}
+            />
           )}
 
           {/* Saqlangan ko'rinish bo'lmasa — poligonlarga moslaymiz */}

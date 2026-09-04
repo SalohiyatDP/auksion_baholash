@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { MapUpload } from "./map-upload";
-import { GeoUpload } from "./geo-upload";
+import { GeoItems } from "./geo-items";
 import { GeoMap } from "./geo-map";
 import { DocumentPreview, type PreviewData } from "./document-preview";
 import { apiFetch } from "@/lib/client";
@@ -472,9 +472,9 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <GeoUpload label="Umumiy maydon" color="red" geojson={totalGeoJson} onChange={(g) => setTotalGeoJson(g)} />
-              <GeoUpload label="Lotlar" color="blue" geojson={lotGeoJson} onChange={(g) => setLotGeoJson(g)} />
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <GeoItems label="Umumiy maydon" color="red" initialFC={initial?.totalGeoJson ?? null} onChange={setTotalGeoJson} />
+              <GeoItems label="Lotlar" color="blue" initialFC={initial?.lotGeoJson ?? null} onChange={setLotGeoJson} />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Xarita turi (preview va Word uchun)">
