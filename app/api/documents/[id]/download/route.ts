@@ -27,12 +27,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       doc.mapZoom != null && doc.mapCenterLat != null && doc.mapCenterLng != null
         ? { lat: doc.mapCenterLat, lng: doc.mapCenterLng, zoom: doc.mapZoom }
         : null;
+    let labelPositions: Record<string, [number, number]> | null = null;
+    try { labelPositions = doc.labelPositions ? JSON.parse(doc.labelPositions) : null; } catch { labelPositions = null; }
     const staticMap = await generateStaticMap(
       doc.totalGeoJson,
       doc.lotGeoJson,
       doc.mapTileType as any,
       view,
-      doc.mapLineWidth
+      doc.mapLineWidth,
+      labelPositions
     );
     if (staticMap) {
       map = staticMap;

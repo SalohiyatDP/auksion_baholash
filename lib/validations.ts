@@ -32,6 +32,7 @@ export const documentInputSchema = z.object({
   mapCenterLng: z.number().nullable().optional(),
   mapZoom: z.number().nullable().optional(),
   mapLineWidth: z.coerce.number().min(1).max(20).optional().default(3),
+  labelPositions: z.string().optional().nullable(),
   totalGeoJson: z.string().optional().nullable(),
   lotGeoJson: z.string().optional().nullable(),
   status: z.enum(["DRAFT", "GENERATED"]).optional().default("DRAFT"),

@@ -3,9 +3,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from "react";
 import "leaflet/dist/leaflet.css";
-import { MapContainer, TileLayer, GeoJSON, LayersControl, useMap, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import { MapContainer, TileLayer, GeoJSON, LayersControl, Marker, useMap, useMapEvents } from "react-leaflet";
 import { MapPin, Maximize2, X } from "lucide-react";
-import { extractRings } from "@/lib/geo/geojson";
+import { extractRings, ringCentroid } from "@/lib/geo/geojson";
 
 interface GeoMapProps {
   totalGeoJson?: string | null;
@@ -15,7 +16,9 @@ interface GeoMapProps {
   center?: [number, number] | null; // [lat, lng]
   zoom?: number | null;
   lineWidth?: number;
+  labelPositions?: Record<string, [number, number]>;
   onViewChange?: (center: [number, number], zoom: number) => void;
+  onLabelMove?: (fid: string, lat: number, lng: number) => void;
 }
 
 function ViewCapture({ onViewChange }: { onViewChange: (c: [number, number], z: number) => void }) {
@@ -34,6 +37,35 @@ const BLUE = "#1E40AF";
 function parse(str?: string | null): any | null {
   if (!str) return null;
   try { return JSON.parse(str); } catch { return null; }
+}
+
+function makeLabelIcon(text: string) {
+  return L.divIcon({
+    className: "area-label-wrap",
+    html: `<span class="area-label-badge">${text}</span>`,
+    iconSize: [1, 1],
+    iconAnchor: [0, 0],
+  });
+}
+
+interface LabelInfo { fid: string; areaHa: any; lat: number; lng: number }
+
+function buildLabels(gj: any): LabelInfo[] {
+  if (!gj) return [];
+  const feats = gj.type === "FeatureCollection" ? gj.features || [] : gj.type === "Feature" ? [gj] : [];
+  const out: LabelInfo[] = [];
+  feats.forEach((f: any, i: number) => {
+    const a = f?.properties?.areaHa;
+    if (a == null || a === "") return;
+    const rings = extractRings({ type: "Feature", geometry: f.geometry });
+    let biggest: any = null;
+    for (const r of rings) if (!biggest || r.length > biggest.length) biggest = r;
+    if (!biggest) return;
+    const c = ringCentroid(biggest);
+    if (!c) return;
+    out.push({ fid: f?.properties?.__fid || `f${i}`, areaHa: a, lat: c[0], lng: c[1] });
+  });
+  return out;
 }
 
 function FitBounds({ total, lot }: { total: any; lot: any }) {
@@ -58,12 +90,7 @@ function FitBounds({ total, lot }: { total: any; lot: any }) {
   return null;
 }
 
-const labelFeature = (f: any, layer: any) => {
-  const a = f?.properties?.areaHa;
-  if (a != null && a !== "") layer.bindTooltip(`${a} ga`, { permanent: true, direction: "center", className: "area-label" });
-};
-
-export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite", center = null, zoom = null, lineWidth = 3, onViewChange }: GeoMapProps) {
+export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite", center = null, zoom = null, lineWidth = 3, labelPositions = {}, onViewChange, onLabelMove }: GeoMapProps) {
   const [mounted, setMounted] = React.useState(false);
   const [fs, setFs] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
@@ -72,6 +99,8 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
   const total = React.useMemo(() => parse(totalGeoJson), [totalGeoJson]);
   const lot = React.useMemo(() => parse(lotGeoJson), [lotGeoJson]);
   const hasGeo = total || lot;
+
+  const labels = React.useMemo(() => [...buildLabels(total), ...buildLabels(lot)], [total, lot]);
 
   const mapEl = (h: number | string) => (
     <MapContainer
@@ -100,11 +129,29 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
       </LayersControl>
 
       {total && (
-        <GeoJSON key={`t-${totalGeoJson?.length ?? 0}-${lineWidth}`} data={total} style={{ color: RED, weight: lineWidth, fillColor: RED, fillOpacity: 0.12 }} onEachFeature={labelFeature} />
+        <GeoJSON key={`t-${totalGeoJson?.length ?? 0}-${lineWidth}`} data={total} style={{ color: RED, weight: lineWidth, fillColor: RED, fillOpacity: 0.12 }} />
       )}
       {lot && (
-        <GeoJSON key={`l-${lotGeoJson?.length ?? 0}-${lineWidth}`} data={lot} style={{ color: BLUE, weight: lineWidth, fillColor: BLUE, fillOpacity: 0.15 }} onEachFeature={labelFeature} />
+        <GeoJSON key={`l-${lotGeoJson?.length ?? 0}-${lineWidth}`} data={lot} style={{ color: BLUE, weight: lineWidth, fillColor: BLUE, fillOpacity: 0.15 }} />
       )}
+
+      {/* Gektar yorliqlari — ushlab siljitish mumkin (draggable) */}
+      {labels.map((l) => {
+        const pos = (l.fid && labelPositions[l.fid]) || [l.lat, l.lng];
+        return (
+          <Marker
+            key={l.fid}
+            position={pos as any}
+            draggable={!!onLabelMove}
+            icon={makeLabelIcon(`${l.areaHa} ga`)}
+            eventHandlers={
+              onLabelMove
+                ? { dragend: (e: any) => { const ll = e.target.getLatLng(); onLabelMove(l.fid, ll.lat, ll.lng); } }
+                : undefined
+            }
+          />
+        );
+      })}
 
       {zoom == null && <FitBounds total={total} lot={lot} />}
       {onViewChange && <ViewCapture onViewChange={onViewChange} />}
@@ -133,7 +180,10 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
 
   return (
     <div>
-      <div className="mb-2 flex items-center justify-end">
+      <div className="mb-2 flex items-center justify-between">
+        {onLabelMove ? (
+          <span className="text-xs text-slate-400">Gektar yozuvini ushlab siljiting</span>
+        ) : <span />}
         <button type="button" onClick={() => setFs(true)} className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
           <Maximize2 className="h-3.5 w-3.5" /> Kattalashtirish
         </button>
@@ -149,9 +199,9 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
       <Legend />
 
       {fs && (
-        // z-index Leaflet'ning ichki qatlamlaridan (1000) baland bo'lishi shart
         <div className="fixed inset-0 flex flex-col bg-black/90 p-3" style={{ zIndex: 9999 }}>
-          <div className="mb-2 flex items-center justify-end">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm text-white/80">{onLabelMove ? "Gektar yozuvini ushlab siljiting" : ""}</span>
             <button type="button" onClick={() => setFs(false)} className="flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
               <X className="h-4 w-4" /> Yopish
             </button>

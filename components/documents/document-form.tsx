@@ -42,6 +42,7 @@ export interface DocumentFormInitial {
   mapCenterLng?: number | null;
   mapZoom?: number | null;
   mapLineWidth?: number;
+  labelPositions?: string | null;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
@@ -113,6 +114,9 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         ? [initial.mapCenterLat, initial.mapCenterLng]
         : null,
     zoom: initial?.mapZoom ?? null,
+  });
+  const [labelPositions, setLabelPositions] = React.useState<Record<string, [number, number]>>(() => {
+    try { return initial?.labelPositions ? JSON.parse(initial.labelPositions) : {}; } catch { return {}; }
   });
   const [totalGeoJson, setTotalGeoJson] = React.useState<string | null>(initial?.totalGeoJson ?? null);
   const [lotGeoJson, setLotGeoJson] = React.useState<string | null>(initial?.lotGeoJson ?? null);
@@ -242,6 +246,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         mapCenterLng: mapView.center?.[1] ?? null,
         mapZoom: mapView.zoom,
         mapLineWidth: Number(mapLineWidth),
+        labelPositions,
         totalGeoJson,
         lotGeoJson,
       }
@@ -284,6 +289,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         mapCenterLng: mapView.center?.[1] ?? null,
         mapZoom: mapView.zoom,
         mapLineWidth: Number(mapLineWidth),
+        labelPositions: JSON.stringify(labelPositions),
         totalGeoJson,
         lotGeoJson,
         status: action === "generate" ? "GENERATED" : "DRAFT",
@@ -502,7 +508,9 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
               center={mapView.center}
               zoom={mapView.zoom}
               lineWidth={Number(mapLineWidth)}
+              labelPositions={labelPositions}
               onViewChange={(center, zoom) => setMapView({ center, zoom })}
+              onLabelMove={(fid, lat, lng) => setLabelPositions((p) => ({ ...p, [fid]: [lat, lng] }))}
             />
             <p className="text-xs text-slate-400">
               Xaritani surib/masshtablab kerakli ko&apos;rinishga keltiring — aynan shu ko&apos;rinish (qatlam va masshtab) Word hujjatiga joylanadi.

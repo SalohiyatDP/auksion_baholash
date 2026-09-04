@@ -53,7 +53,8 @@ export async function generateStaticMap(
   lotGeoJson?: string | null,
   tileType: MapTileType = "google_satellite",
   view?: MapView | null,
-  lineWidth = 3
+  lineWidth = 3,
+  labelPositions?: Record<string, [number, number]> | null
 ): Promise<StaticMapResult | null> {
   // Static rasm yuqori aniqlikda (1500px) — chiziqni ko'rinarli qilish uchun 2x
   const strokeW = Math.max(1, Math.round(lineWidth * 2));
@@ -92,9 +93,10 @@ export async function generateStaticMap(
           map.addPolygon({ coords, color: stroke, fill, width: strokeW });
           if (!biggest || ring.length > biggest.length) biggest = ring;
         }
-        // Har maydon/lot markazida gektar yozuvi
+        // Har maydon/lot uchun gektar yozuvi — siljitilgan joy bo'lsa o'sha, aks holda markaz
         if (feat.areaHa != null && biggest) {
-          const c = ringCentroid(biggest); // [lat, lng]
+          const moved = feat.fid && labelPositions && labelPositions[feat.fid];
+          const c = moved ? (moved as [number, number]) : ringCentroid(biggest); // [lat, lng]
           if (c) {
             try {
               map.addText({

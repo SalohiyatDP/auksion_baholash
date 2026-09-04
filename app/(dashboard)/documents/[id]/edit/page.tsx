@@ -55,6 +55,7 @@ export default async function EditDocumentPage({
           mapCenterLng: doc.mapCenterLng,
           mapZoom: doc.mapZoom,
           mapLineWidth: doc.mapLineWidth,
+          labelPositions: doc.labelPositions,
           totalGeoJson: doc.totalGeoJson,
           lotGeoJson: doc.lotGeoJson,
         }}

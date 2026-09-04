@@ -36,6 +36,7 @@ export interface PreviewData {
   mapCenterLng?: number | null;
   mapZoom?: number | null;
   mapLineWidth?: number;
+  labelPositions?: Record<string, [number, number]>;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
@@ -80,6 +81,7 @@ export function DocumentPreview({ data }: { data: PreviewData }) {
             center={data.mapCenterLat != null && data.mapCenterLng != null ? [data.mapCenterLat, data.mapCenterLng] : null}
             zoom={data.mapZoom ?? null}
             lineWidth={data.mapLineWidth ?? 3}
+            labelPositions={data.labelPositions ?? {}}
           />
         ) : data.mapUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

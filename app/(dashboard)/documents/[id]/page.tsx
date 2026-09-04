@@ -61,6 +61,7 @@ export default async function DocumentViewPage({
     mapCenterLng: doc.mapCenterLng,
     mapZoom: doc.mapZoom,
     mapLineWidth: doc.mapLineWidth,
+    labelPositions: (() => { try { return doc.labelPositions ? JSON.parse(doc.labelPositions) : {}; } catch { return {}; } })(),
     totalGeoJson: doc.totalGeoJson,
     lotGeoJson: doc.lotGeoJson,
   };

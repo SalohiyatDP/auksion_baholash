@@ -41,13 +41,13 @@ export function itemsToFC(items: Item[]): string | null {
         ? [{ type: "Feature", geometry: gj, properties: {} }]
         : [];
     const areaHa = it.areaHa !== "" && !Number.isNaN(Number(it.areaHa)) ? Number(it.areaHa) : null;
-    for (const f of feats) {
+    feats.forEach((f: any, idx: number) => {
       features.push({
         type: "Feature",
         geometry: f.geometry,
-        properties: { ...(f.properties || {}), areaHa, __group: it.id },
+        properties: { ...(f.properties || {}), areaHa, __group: it.id, __fid: `${it.id}:${idx}` },
       });
-    }
+    });
   }
   if (!features.length) return null;
   return JSON.stringify({ type: "FeatureCollection", features });

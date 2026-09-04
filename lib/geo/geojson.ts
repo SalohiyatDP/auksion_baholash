@@ -81,6 +81,7 @@ export function ringsCenter(rings: Ring[]): [number, number] | null {
 export interface GeoFeatureInfo {
   rings: Ring[];
   areaHa: number | null;
+  fid: string | null;
 }
 
 /**
@@ -100,7 +101,8 @@ export function extractFeatures(geojson: any): GeoFeatureInfo[] {
     if (rings.length === 0) continue;
     const raw = f.properties ? f.properties.areaHa : null;
     const areaHa = raw != null && raw !== "" && !Number.isNaN(Number(raw)) ? Number(raw) : null;
-    out.push({ rings, areaHa });
+    const fid = f.properties && f.properties.__fid ? String(f.properties.__fid) : null;
+    out.push({ rings, areaHa, fid });
   }
   return out;
 }
