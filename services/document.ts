@@ -183,25 +183,20 @@ function buildTextContent(d: DocxData, tr: Tr): (Paragraph | Table)[] {
       children: [new TextRun({ text: calc.formula, bold: true, font: FONT, size: BODY_SIZE })],
     }),
 
-    // Narx — ajratilgan (yashil) blok
+    // Narx — oq fon, ko'k matn/ramka; matn 14, son 15 o'lchamda
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 60, after: 120 },
-      shading: { type: ShadingType.CLEAR, color: "auto", fill: GREEN_LIGHT },
       border: {
-        top: { style: BorderStyle.SINGLE, size: 6, color: GREEN },
-        bottom: { style: BorderStyle.SINGLE, size: 6, color: GREEN },
-        left: { style: BorderStyle.SINGLE, size: 6, color: GREEN },
-        right: { style: BorderStyle.SINGLE, size: 6, color: GREEN },
+        top: { style: BorderStyle.SINGLE, size: 4, color: ACCENT },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: ACCENT },
+        left: { style: BorderStyle.SINGLE, size: 4, color: ACCENT },
+        right: { style: BorderStyle.SINGLE, size: 4, color: ACCENT },
       },
       children: [
-        new TextRun({
-          text: tr(`Boshlang'ich narxi ${formatInteger(d.startingPrice)} so'mni tashkil etadi.`),
-          bold: true,
-          font: FONT,
-          size: 30,
-          color: GREEN,
-        }),
+        new TextRun({ text: tr("Boshlang'ich narxi "), bold: true, font: FONT, size: 28, color: ACCENT }),
+        new TextRun({ text: formatInteger(d.startingPrice), bold: true, font: FONT, size: 30, color: ACCENT }),
+        new TextRun({ text: tr(" so'mni tashkil etadi."), bold: true, font: FONT, size: 28, color: ACCENT }),
       ],
     }),
 

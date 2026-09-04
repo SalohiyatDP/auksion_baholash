@@ -149,9 +149,11 @@ function TextBody({ data, mode }: { data: PreviewData; mode: "LATIN" | "CYRILLIC
       <p style={{ textAlign: "center", fontWeight: "bold", margin: "10px 0" }}>{tr(data.formula)}</p>
 
       <div style={{ textAlign: "center", margin: "12px 0" }}>
-        <span style={{ display: "inline-block", background: "#ecfdf5", color: "#047857", border: "1px solid #a7f3d0", borderRadius: 8, padding: "8px 18px", fontWeight: "bold", fontSize: 16 }}>
-          {tr("Boshlang'ich narx")}: {formatInteger(data.startingPrice)} {tr("so'm")}
-        </span>
+        <div style={{ border: "2px solid #1E40AF", background: "#fff", padding: "8px 14px", fontWeight: "bold", color: "#1E40AF" }}>
+          <span style={{ fontSize: 14 }}>{tr("Boshlang'ich narxi ")}</span>
+          <span style={{ fontSize: 16 }}>{formatInteger(data.startingPrice)}</span>
+          <span style={{ fontSize: 14 }}>{tr(" so'mni tashkil etadi.")}</span>
+        </div>
         <p style={{ fontStyle: "italic", color: "#475569", marginTop: 6, fontSize: 13 }}>
           {tr(`(${numberToWordsUz(data.startingPrice)} so'm)`)}
         </p>
