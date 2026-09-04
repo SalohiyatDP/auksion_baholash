@@ -4,9 +4,8 @@
 import * as React from "react";
 import "leaflet/dist/leaflet.css";
 import { MapContainer, TileLayer, GeoJSON, LayersControl, useMap, useMapEvents } from "react-leaflet";
-import { MapPin, Maximize2, Download, X, Loader2 } from "lucide-react";
+import { MapPin, Maximize2, X } from "lucide-react";
 import { extractRings } from "@/lib/geo/geojson";
-import { useToast } from "@/components/ui/toast";
 
 interface GeoMapProps {
   totalGeoJson?: string | null;
@@ -67,54 +66,16 @@ const labelFeature = (f: any, layer: any) => {
 export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite", center = null, zoom = null, lineWidth = 3, onViewChange }: GeoMapProps) {
   const [mounted, setMounted] = React.useState(false);
   const [fs, setFs] = React.useState(false);
-  const [downloading, setDownloading] = React.useState(false);
-  const mapRef = React.useRef<any>(null);
-  const toast = useToast();
   React.useEffect(() => { setMounted(true); }, []);
   const isChecked = (t: string) => tileType === t;
 
   const total = React.useMemo(() => parse(totalGeoJson), [totalGeoJson]);
   const lot = React.useMemo(() => parse(lotGeoJson), [lotGeoJson]);
-
   const hasGeo = total || lot;
-
-  async function downloadPng() {
-    if (!hasGeo) { toast.error("Avval SHP/KMZ yuklang"); return; }
-    setDownloading(true);
-    try {
-      const m = mapRef.current;
-      const view = m
-        ? { lat: m.getCenter().lat, lng: m.getCenter().lng, zoom: m.getZoom() }
-        : center && zoom != null ? { lat: center[0], lng: center[1], zoom } : null;
-      const res = await fetch("/api/map-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ totalGeoJson, lotGeoJson, tileType, lineWidth, view }),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => null);
-        throw new Error((j && j.error) || "Rasm olinmadi");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "xarita.png";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Yuklab olishda xatolik");
-    } finally {
-      setDownloading(false);
-    }
-  }
 
   const mapEl = (h: number | string) => (
     <MapContainer
       key={`${tileType}-${fs}`}
-      ref={mapRef}
       center={center ?? [41.0, 71.6]}
       zoom={zoom ?? 12}
       style={{ height: h, width: "100%" }}
@@ -150,21 +111,10 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
     </MapContainer>
   );
 
-  const Toolbar = () => (
-    <div className="mb-2 flex items-center justify-end gap-2">
-      <button type="button" onClick={() => setFs(true)} className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
-        <Maximize2 className="h-3.5 w-3.5" /> Kattalashtirish
-      </button>
-      <button type="button" onClick={downloadPng} disabled={downloading} className="flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
-        {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} PNG yuklab olish
-      </button>
-    </div>
-  );
-
-  const Legend = () => (
-    <div className="mt-2 flex gap-4 text-xs text-slate-500">
+  const Legend = ({ dark }: { dark?: boolean }) => (
+    <div className={`mt-2 flex gap-4 text-xs ${dark ? "text-white/80" : "text-slate-500"}`}>
       <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: RED }} /> Umumiy maydon (qizil)</span>
-      <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: BLUE }} /> Lotlar (ko'k)</span>
+      <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: BLUE }} /> Lotlar (ko&apos;k)</span>
     </div>
   );
 
@@ -183,7 +133,12 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
 
   return (
     <div>
-      <Toolbar />
+      <div className="mb-2 flex items-center justify-end">
+        <button type="button" onClick={() => setFs(true)} className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
+          <Maximize2 className="h-3.5 w-3.5" /> Kattalashtirish
+        </button>
+      </div>
+
       <div className="overflow-hidden rounded-lg border">
         {!fs ? mapEl(height) : (
           <div className="flex items-center justify-center bg-slate-50 text-sm text-slate-400" style={{ height }}>
@@ -194,20 +149,15 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
       <Legend />
 
       {fs && (
-        <div className="fixed inset-0 z-[100] flex flex-col bg-black/90 p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <button type="button" onClick={downloadPng} disabled={downloading} className="flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60">
-              {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PNG yuklab olish
-            </button>
+        // z-index Leaflet'ning ichki qatlamlaridan (1000) baland bo'lishi shart
+        <div className="fixed inset-0 flex flex-col bg-black/90 p-3" style={{ zIndex: 9999 }}>
+          <div className="mb-2 flex items-center justify-end">
             <button type="button" onClick={() => setFs(false)} className="flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
               <X className="h-4 w-4" /> Yopish
             </button>
           </div>
           <div className="flex-1 overflow-hidden rounded-lg bg-white">{mapEl("100%")}</div>
-          <div className="mt-2 flex gap-4 text-xs text-white/80">
-            <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: RED }} /> Umumiy maydon (qizil)</span>
-            <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: BLUE }} /> Lotlar (ko&apos;k)</span>
-          </div>
+          <Legend dark />
         </div>
       )}
     </div>
