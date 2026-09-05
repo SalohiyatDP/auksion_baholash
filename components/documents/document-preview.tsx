@@ -4,6 +4,7 @@ import * as React from "react";
 import { formatInteger, formatHectare, formatDecimal } from "@/lib/format";
 import { latinToCyrillic, type ScriptMode } from "@/lib/translit";
 import { numberToWordsUz } from "@/lib/number-to-words";
+import { type Leader, type LabelStyle } from "@/lib/geo/leader";
 import { GeoMap } from "./geo-map";
 
 export interface PreviewData {
@@ -36,7 +37,8 @@ export interface PreviewData {
   mapCenterLng?: number | null;
   mapZoom?: number | null;
   mapLineWidth?: number;
-  labelPositions?: Record<string, [number, number]>;
+  leaders?: Record<string, Leader>;
+  labelStyle?: LabelStyle;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
@@ -81,7 +83,8 @@ export function DocumentPreview({ data }: { data: PreviewData }) {
             center={data.mapCenterLat != null && data.mapCenterLng != null ? [data.mapCenterLat, data.mapCenterLng] : null}
             zoom={data.mapZoom ?? null}
             lineWidth={data.mapLineWidth ?? 3}
-            labelPositions={data.labelPositions ?? {}}
+            leaders={data.leaders ?? {}}
+            labelStyle={data.labelStyle}
           />
         ) : data.mapUrl ? (
           // eslint-disable-next-line @next/next/no-img-element

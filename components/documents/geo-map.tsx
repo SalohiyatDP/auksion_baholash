@@ -4,21 +4,23 @@
 import * as React from "react";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { MapContainer, TileLayer, GeoJSON, LayersControl, Marker, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, LayersControl, Marker, Polyline, useMap, useMapEvents } from "react-leaflet";
 import { MapPin, Maximize2, X } from "lucide-react";
 import { extractRings, ringCentroid } from "@/lib/geo/geojson";
+import { defaultLeader, type Leader, type LabelStyle, DEFAULT_LABEL_STYLE, type Pt } from "@/lib/geo/leader";
 
 interface GeoMapProps {
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
   height?: number;
   tileType?: string;
-  center?: [number, number] | null; // [lat, lng]
+  center?: [number, number] | null;
   zoom?: number | null;
   lineWidth?: number;
-  labelPositions?: Record<string, [number, number]>;
+  leaders?: Record<string, Leader>;
+  labelStyle?: LabelStyle;
   onViewChange?: (center: [number, number], zoom: number) => void;
-  onLabelMove?: (fid: string, lat: number, lng: number) => void;
+  onLeaderChange?: (fid: string, leader: Leader) => void;
 }
 
 function ViewCapture({ onViewChange }: { onViewChange: (c: [number, number], z: number) => void }) {
@@ -39,16 +41,24 @@ function parse(str?: string | null): any | null {
   try { return JSON.parse(str); } catch { return null; }
 }
 
-function makeLabelIcon(text: string) {
+function dotIcon(color: string) {
   return L.divIcon({
-    className: "area-label-wrap",
-    html: `<span class="area-label-badge">${text}</span>`,
+    className: "",
+    html: `<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 2px #000;cursor:move"></div>`,
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
+}
+function textIcon(text: string, s: LabelStyle) {
+  return L.divIcon({
+    className: "",
+    html: `<span style="display:inline-block;transform:translate(-50%,-100%);white-space:nowrap;color:${s.textColor};font-weight:700;font-size:${s.textSize}px;line-height:1.1;border-bottom:${s.lineWidth}px solid ${s.lineColor};padding:0 6px 2px;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;cursor:move">${text}</span>`,
     iconSize: [1, 1],
     iconAnchor: [0, 0],
   });
 }
 
-interface LabelInfo { fid: string; areaHa: any; lat: number; lng: number }
+interface LabelInfo { fid: string; areaHa: any; centroid: Pt; bboxH: number; bboxW: number }
 
 function buildLabels(gj: any): LabelInfo[] {
   if (!gj) return [];
@@ -58,12 +68,19 @@ function buildLabels(gj: any): LabelInfo[] {
     const a = f?.properties?.areaHa;
     if (a == null || a === "") return;
     const rings = extractRings({ type: "Feature", geometry: f.geometry });
+    if (!rings.length) return;
     let biggest: any = null;
-    for (const r of rings) if (!biggest || r.length > biggest.length) biggest = r;
-    if (!biggest) return;
+    let minLat = 90, minLng = 180, maxLat = -90, maxLng = -180;
+    for (const r of rings) {
+      if (!biggest || r.length > biggest.length) biggest = r;
+      for (const [la, ln] of r) {
+        minLat = Math.min(minLat, la); maxLat = Math.max(maxLat, la);
+        minLng = Math.min(minLng, ln); maxLng = Math.max(maxLng, ln);
+      }
+    }
     const c = ringCentroid(biggest);
     if (!c) return;
-    out.push({ fid: f?.properties?.__fid || `f${i}`, areaHa: a, lat: c[0], lng: c[1] });
+    out.push({ fid: f?.properties?.__fid || `f${i}`, areaHa: a, centroid: c, bboxH: maxLat - minLat, bboxW: maxLng - minLng });
   });
   return out;
 }
@@ -84,13 +101,13 @@ function FitBounds({ total, lot }: { total: any; lot: any }) {
       }
     }
     if (has) {
-      try { map.fitBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [24, 24] }); } catch { /* ignore */ }
+      try { map.fitBounds([[minLat, minLng], [maxLat, maxLng]], { padding: [40, 40] }); } catch { /* ignore */ }
     }
   }, [total, lot, map]);
   return null;
 }
 
-export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite", center = null, zoom = null, lineWidth = 3, labelPositions = {}, onViewChange, onLabelMove }: GeoMapProps) {
+export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "google_satellite", center = null, zoom = null, lineWidth = 3, leaders = {}, labelStyle = DEFAULT_LABEL_STYLE, onViewChange, onLeaderChange }: GeoMapProps) {
   const [mounted, setMounted] = React.useState(false);
   const [fs, setFs] = React.useState(false);
   React.useEffect(() => { setMounted(true); }, []);
@@ -99,8 +116,12 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
   const total = React.useMemo(() => parse(totalGeoJson), [totalGeoJson]);
   const lot = React.useMemo(() => parse(lotGeoJson), [lotGeoJson]);
   const hasGeo = total || lot;
-
   const labels = React.useMemo(() => [...buildLabels(total), ...buildLabels(lot)], [total, lot]);
+  const s = labelStyle;
+
+  const leaderFor = (l: LabelInfo): Leader => leaders[l.fid] ?? defaultLeader(l.centroid, l.bboxH, l.bboxW);
+
+  const styleKey = `${s.lineColor}-${s.lineWidth}-${s.textColor}-${s.textSize}`;
 
   const mapEl = (h: number | string) => (
     <MapContainer
@@ -135,21 +156,18 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
         <GeoJSON key={`l-${lotGeoJson?.length ?? 0}-${lineWidth}`} data={lot} style={{ color: BLUE, weight: lineWidth, fillColor: BLUE, fillOpacity: 0.15 }} />
       )}
 
-      {/* Gektar yorliqlari — ushlab siljitish mumkin (draggable) */}
+      {/* Gektar leader-chizmalari: uchi -> o'rtasi -> tepasi (matn) */}
       {labels.map((l) => {
-        const pos = (l.fid && labelPositions[l.fid]) || [l.lat, l.lng];
+        const lead = leaderFor(l);
+        const editable = !!onLeaderChange;
+        const upd = (key: "tip" | "bend" | "top", ll: any) => onLeaderChange && onLeaderChange(l.fid, { ...lead, [key]: [ll.lat, ll.lng] });
         return (
-          <Marker
-            key={l.fid}
-            position={pos as any}
-            draggable={!!onLabelMove}
-            icon={makeLabelIcon(`${l.areaHa} ga`)}
-            eventHandlers={
-              onLabelMove
-                ? { dragend: (e: any) => { const ll = e.target.getLatLng(); onLabelMove(l.fid, ll.lat, ll.lng); } }
-                : undefined
-            }
-          />
+          <React.Fragment key={l.fid}>
+            <Polyline positions={[lead.tip, lead.bend, lead.top]} pathOptions={{ color: s.lineColor, weight: s.lineWidth }} />
+            <Marker position={lead.tip} draggable={editable} icon={dotIcon(s.lineColor)} eventHandlers={editable ? { dragend: (e: any) => upd("tip", e.target.getLatLng()) } : undefined} />
+            <Marker position={lead.bend} draggable={editable} icon={dotIcon(s.lineColor)} eventHandlers={editable ? { dragend: (e: any) => upd("bend", e.target.getLatLng()) } : undefined} />
+            <Marker key={`top-${l.fid}-${styleKey}`} position={lead.top} draggable={editable} icon={textIcon(`${l.areaHa}`, s)} eventHandlers={editable ? { dragend: (e: any) => upd("top", e.target.getLatLng()) } : undefined} />
+          </React.Fragment>
         );
       })}
 
@@ -173,7 +191,6 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
       </div>
     );
   }
-
   if (!mounted) {
     return <div className="w-full animate-pulse rounded-lg bg-slate-100" style={{ height }} />;
   }
@@ -181,9 +198,7 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
   return (
     <div>
       <div className="mb-2 flex items-center justify-between">
-        {onLabelMove ? (
-          <span className="text-xs text-slate-400">Gektar yozuvini ushlab siljiting</span>
-        ) : <span />}
+        {onLeaderChange ? <span className="text-xs text-slate-400">Uch, o&apos;rta va gektar yozuvini ushlab siljiting</span> : <span />}
         <button type="button" onClick={() => setFs(true)} className="flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
           <Maximize2 className="h-3.5 w-3.5" /> Kattalashtirish
         </button>
@@ -201,7 +216,7 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
       {fs && (
         <div className="fixed inset-0 flex flex-col bg-black/90 p-3" style={{ zIndex: 9999 }}>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm text-white/80">{onLabelMove ? "Gektar yozuvini ushlab siljiting" : ""}</span>
+            <span className="text-sm text-white/80">{onLeaderChange ? "Uch, o'rta va gektar yozuvini ushlab siljiting" : ""}</span>
             <button type="button" onClick={() => setFs(false)} className="flex items-center gap-1 rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100">
               <X className="h-4 w-4" /> Yopish
             </button>

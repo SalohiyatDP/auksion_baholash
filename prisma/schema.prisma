@@ -217,8 +217,10 @@ model Document {
   // Chizma (poligon) chiziq qalinligi
   mapLineWidth   Float          @default(3)
 
-  // Gektar yorliqlarining siljitilgan joylashuvi (JSON: { "<fid>": [lat, lng] })
+  // Gektar yorliqlari leader joylashuvi (JSON: { "<fid>": { tip, bend, top } })
   labelPositions String?
+  // Yorliq uslubi (JSON: { lineColor, lineWidth, textColor, textSize })
+  labelStyle     String?
 
   status         String         @default("DRAFT")
 

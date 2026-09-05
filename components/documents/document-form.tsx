@@ -16,6 +16,7 @@ import { DocumentPreview, type PreviewData } from "./document-preview";
 import { apiFetch } from "@/lib/client";
 import { formatHectare, formatSom } from "@/lib/format";
 import { SCRIPT_LABELS, type ScriptMode } from "@/lib/translit";
+import { parseLeaders, parseStyle, type Leader, type LabelStyle } from "@/lib/geo/leader";
 
 interface Option { id: number; name: string }
 interface UsageOption { id: number; code: string; name: string; coefficientF: number }
@@ -43,6 +44,7 @@ export interface DocumentFormInitial {
   mapZoom?: number | null;
   mapLineWidth?: number;
   labelPositions?: string | null;
+  labelStyle?: string | null;
   totalGeoJson?: string | null;
   lotGeoJson?: string | null;
 }
@@ -115,9 +117,8 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         : null,
     zoom: initial?.mapZoom ?? null,
   });
-  const [labelPositions, setLabelPositions] = React.useState<Record<string, [number, number]>>(() => {
-    try { return initial?.labelPositions ? JSON.parse(initial.labelPositions) : {}; } catch { return {}; }
-  });
+  const [leaders, setLeaders] = React.useState<Record<string, Leader>>(() => parseLeaders(initial?.labelPositions));
+  const [labelStyle, setLabelStyle] = React.useState<LabelStyle>(() => parseStyle(initial?.labelStyle));
   const [totalGeoJson, setTotalGeoJson] = React.useState<string | null>(initial?.totalGeoJson ?? null);
   const [lotGeoJson, setLotGeoJson] = React.useState<string | null>(initial?.lotGeoJson ?? null);
 
@@ -246,7 +247,8 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         mapCenterLng: mapView.center?.[1] ?? null,
         mapZoom: mapView.zoom,
         mapLineWidth: Number(mapLineWidth),
-        labelPositions,
+        leaders,
+        labelStyle,
         totalGeoJson,
         lotGeoJson,
       }
@@ -289,7 +291,8 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         mapCenterLng: mapView.center?.[1] ?? null,
         mapZoom: mapView.zoom,
         mapLineWidth: Number(mapLineWidth),
-        labelPositions: JSON.stringify(labelPositions),
+        labelPositions: JSON.stringify(leaders),
+        labelStyle: JSON.stringify(labelStyle),
         totalGeoJson,
         lotGeoJson,
         status: action === "generate" ? "GENERATED" : "DRAFT",
@@ -488,7 +491,7 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
                   {TILE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </Select>
               </Field>
-              <Field label={`Chiziq qalinligi: ${mapLineWidth} px`}>
+              <Field label={`Poligon chizig'i: ${mapLineWidth} px`}>
                 <input
                   type="range"
                   min={1}
@@ -500,6 +503,22 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
                 />
               </Field>
             </div>
+
+            {/* Gektar leader-chizmasi uslubi */}
+            <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3 sm:grid-cols-4">
+              <Field label="Chiziq rangi">
+                <input type="color" value={labelStyle.lineColor} onChange={(e) => setLabelStyle((s) => ({ ...s, lineColor: e.target.value }))} className="h-9 w-full cursor-pointer rounded border" />
+              </Field>
+              <Field label={`Chiziq qalinligi: ${labelStyle.lineWidth}`}>
+                <input type="range" min={1} max={8} step={1} value={labelStyle.lineWidth} onChange={(e) => setLabelStyle((s) => ({ ...s, lineWidth: Number(e.target.value) }))} className="mt-2 w-full accent-primary" />
+              </Field>
+              <Field label="Gektar rangi">
+                <input type="color" value={labelStyle.textColor} onChange={(e) => setLabelStyle((s) => ({ ...s, textColor: e.target.value }))} className="h-9 w-full cursor-pointer rounded border" />
+              </Field>
+              <Field label={`Gektar o'lchami: ${labelStyle.textSize}`}>
+                <input type="range" min={10} max={40} step={1} value={labelStyle.textSize} onChange={(e) => setLabelStyle((s) => ({ ...s, textSize: Number(e.target.value) }))} className="mt-2 w-full accent-primary" />
+              </Field>
+            </div>
             <GeoMap
               totalGeoJson={totalGeoJson}
               lotGeoJson={lotGeoJson}
@@ -508,9 +527,10 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
               center={mapView.center}
               zoom={mapView.zoom}
               lineWidth={Number(mapLineWidth)}
-              labelPositions={labelPositions}
+              leaders={leaders}
+              labelStyle={labelStyle}
               onViewChange={(center, zoom) => setMapView({ center, zoom })}
-              onLabelMove={(fid, lat, lng) => setLabelPositions((p) => ({ ...p, [fid]: [lat, lng] }))}
+              onLeaderChange={(fid, leader) => setLeaders((p) => ({ ...p, [fid]: leader }))}
             />
             <p className="text-xs text-slate-400">
               Xaritani surib/masshtablab kerakli ko&apos;rinishga keltiring — aynan shu ko&apos;rinish (qatlam va masshtab) Word hujjatiga joylanadi.

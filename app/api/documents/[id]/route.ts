@@ -77,6 +77,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
         mapZoom: built.mapZoom,
         mapLineWidth: built.mapLineWidth,
         labelPositions: built.labelPositions,
+        labelStyle: built.labelStyle,
         totalGeoJson: built.totalGeoJson,
         lotGeoJson: built.lotGeoJson,
         status: input.status ?? doc.status,

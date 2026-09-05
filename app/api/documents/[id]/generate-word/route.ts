@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth";
 import { generateDocx, type DocxData, type MapImage } from "@/services/document";
 import { generateStaticMap } from "@/services/staticmap";
+import { parseLeaders, parseStyle } from "@/lib/geo/leader";
 import { storage } from "@/services/storage";
 import { ok, fail, handleError } from "@/lib/api";
 
@@ -26,15 +27,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       doc.mapZoom != null && doc.mapCenterLat != null && doc.mapCenterLng != null
         ? { lat: doc.mapCenterLat, lng: doc.mapCenterLng, zoom: doc.mapZoom }
         : null;
-    let labelPositions: Record<string, [number, number]> | null = null;
-    try { labelPositions = doc.labelPositions ? JSON.parse(doc.labelPositions) : null; } catch { labelPositions = null; }
     const staticMap = await generateStaticMap(
       doc.totalGeoJson,
       doc.lotGeoJson,
       doc.mapTileType as any,
       view,
       doc.mapLineWidth,
-      labelPositions
+      parseLeaders(doc.labelPositions),
+      parseStyle(doc.labelStyle)
     );
     if (staticMap) {
       map = staticMap;

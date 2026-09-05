@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
         mapZoom: built.mapZoom,
         mapLineWidth: built.mapLineWidth,
         labelPositions: built.labelPositions,
+        labelStyle: built.labelStyle,
         totalGeoJson: built.totalGeoJson,
         lotGeoJson: built.lotGeoJson,
         status: input.status ?? "DRAFT",

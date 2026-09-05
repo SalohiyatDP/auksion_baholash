@@ -40,6 +40,7 @@ export interface BuiltDocument {
   mapZoom: number | null;
   mapLineWidth: number;
   labelPositions: string | null;
+  labelStyle: string | null;
   totalGeoJson: string | null;
   lotGeoJson: string | null;
 }
@@ -111,6 +112,7 @@ export async function buildDocumentData(input: DocumentInput): Promise<BuiltDocu
     mapZoom: input.mapZoom ?? null,
     mapLineWidth: input.mapLineWidth ?? 3,
     labelPositions: input.labelPositions ?? null,
+    labelStyle: input.labelStyle ?? null,
     totalGeoJson: input.totalGeoJson ?? null,
     lotGeoJson: input.lotGeoJson ?? null,
   };
