@@ -49,10 +49,20 @@ function dotIcon(color: string) {
     iconAnchor: [6, 6],
   });
 }
+// O'rta nuqta — ko'rinmas, lekin ushlab siljitiladigan handle
+function invisibleIcon() {
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:18px;height:18px;background:transparent;cursor:move"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+  });
+}
+// Gektar matni — tag chiziq ustida (chiziqning o'zi alohida Polyline)
 function textIcon(text: string, s: LabelStyle) {
   return L.divIcon({
     className: "",
-    html: `<span style="display:inline-block;transform:translate(-50%,-100%);white-space:nowrap;color:${s.textColor};font-weight:700;font-size:${s.textSize}px;line-height:1.1;border-bottom:${s.lineWidth}px solid ${s.lineColor};padding:0 6px 2px;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;cursor:move">${text}</span>`,
+    html: `<span style="display:inline-block;transform:translate(-50%,-135%);white-space:nowrap;color:${s.textColor};font-weight:700;font-size:${s.textSize}px;line-height:1.1;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;cursor:move">${text}</span>`,
     iconSize: [1, 1],
     iconAnchor: [0, 0],
   });
@@ -161,11 +171,17 @@ export function GeoMap({ totalGeoJson, lotGeoJson, height = 360, tileType = "goo
         const lead = leaderFor(l);
         const editable = !!onLeaderChange;
         const upd = (key: "tip" | "bend" | "top", ll: any) => onLeaderChange && onLeaderChange(l.fid, { ...lead, [key]: [ll.lat, ll.lng] });
+        const barHalf = Math.max(l.bboxW * 0.05, 0.00012);
+        const barLeft: Pt = [lead.top[0], lead.top[1] - barHalf];
+        const barRight: Pt = [lead.top[0], lead.top[1] + barHalf];
         return (
           <React.Fragment key={l.fid}>
+            {/* Ko'rsatkich chizig'i: uchi -> o'rtasi -> tag chiziq markazi (bir nuqtada tutashadi) */}
             <Polyline positions={[lead.tip, lead.bend, lead.top]} pathOptions={{ color: s.lineColor, weight: s.lineWidth }} />
+            {/* Gorizontal tag chiziq (gektar tagida) */}
+            <Polyline positions={[barLeft, barRight]} pathOptions={{ color: s.lineColor, weight: s.lineWidth }} />
             <Marker position={lead.tip} draggable={editable} icon={dotIcon(s.lineColor)} eventHandlers={editable ? { dragend: (e: any) => upd("tip", e.target.getLatLng()) } : undefined} />
-            <Marker position={lead.bend} draggable={editable} icon={dotIcon(s.lineColor)} eventHandlers={editable ? { dragend: (e: any) => upd("bend", e.target.getLatLng()) } : undefined} />
+            <Marker position={lead.bend} draggable={editable} icon={invisibleIcon()} eventHandlers={editable ? { dragend: (e: any) => upd("bend", e.target.getLatLng()) } : undefined} />
             <Marker key={`top-${l.fid}-${styleKey}`} position={lead.top} draggable={editable} icon={textIcon(`${l.areaHa}`, s)} eventHandlers={editable ? { dragend: (e: any) => upd("top", e.target.getLatLng()) } : undefined} />
           </React.Fragment>
         );
