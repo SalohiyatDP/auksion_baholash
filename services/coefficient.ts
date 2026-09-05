@@ -82,7 +82,7 @@ export async function resolveLandUsage(code: string) {
 
 /** Barcha koeffitsiyent jadvallarini birga qaytaradi (UI uchun) */
 export async function getAllCoefficients() {
-  const [territory, taxRates, landUsage, areas, engineering, legal] =
+  const [territory, taxRates, landUsage, areas, engineering, legal, organizations, purposes] =
     await Promise.all([
       prisma.territoryCategory.findMany({ include: { district: true } }),
       prisma.taxRate.findMany({ include: { district: true } }),
@@ -90,6 +90,8 @@ export async function getAllCoefficients() {
       prisma.areaCoefficient.findMany({ orderBy: { minArea: "asc" } }),
       prisma.engineeringCoefficient.findMany(),
       prisma.legalReference.findMany(),
+      prisma.organization.findMany({ orderBy: { name: "asc" } }),
+      prisma.projectPurpose.findMany({ orderBy: { name: "asc" } }),
     ]);
-  return { territory, taxRates, landUsage, areas, engineering, legal };
+  return { territory, taxRates, landUsage, areas, engineering, legal, organizations, purposes };
 }

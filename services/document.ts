@@ -12,16 +12,22 @@ import {
   ImageRun,
   PageBreak,
   VerticalAlign,
+  ShadingType,
   type IImageOptions,
 } from "docx";
 import { calculateStartingPrice } from "./calculation";
-import { formatInteger, formatSom, formatHectare, formatDecimal } from "@/lib/format";
+import { formatInteger, formatHectare, formatDecimal, formatDate } from "@/lib/format";
 import { getImageSize } from "@/lib/image-size";
+import { latinToCyrillic } from "@/lib/translit";
+import { numberToWordsUz } from "@/lib/number-to-words";
 
-const FONT = "Times New Roman";
-const BODY_SIZE = 28; // 14pt (half-points)
-const TITLE_SIZE = 28; // 14pt
+let FONT = "Times New Roman";
+const BODY_SIZE = 28; // 14pt
 const MALUMOT_SIZE = 32; // 16pt
+const ACCENT = "1E40AF";
+const ACCENT_LIGHT = "DBEAFE";
+const GREEN = "047857";
+const GREEN_LIGHT = "ECFDF5";
 
 export interface DocxData {
   regionName: string;
@@ -44,104 +50,183 @@ export interface DocxData {
   tDescription: string;
   fDescription: string;
   legalReference: string;
+  scriptMode?: string;
+  fontFamily?: string;
+  documentNumber?: string;
 }
 
 export interface MapImage {
   buffer: Buffer;
-  mime: string; // image/png | image/jpeg
+  mime: string;
 }
 
-function titleLine(text: string, size = TITLE_SIZE) {
+type Tr = (s: string) => string;
+
+function titleLine(text: string, size: number, color = "0F172A") {
   return new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { after: 80 },
-    children: [new TextRun({ text, bold: true, font: FONT, size })],
+    children: [new TextRun({ text, bold: true, font: FONT, size, color })],
   });
 }
 
-function bodyPara(text: string, opts: { justify?: boolean; bold?: boolean; center?: boolean; spacingAfter?: number } = {}) {
+function bodyPara(text: string) {
   return new Paragraph({
-    alignment: opts.center
-      ? AlignmentType.CENTER
-      : opts.justify
-      ? AlignmentType.JUSTIFIED
-      : AlignmentType.LEFT,
-    spacing: { after: opts.spacingAfter ?? 160, line: 276 },
-    indent: opts.justify ? { firstLine: 567 } : undefined, // 1 sm xatboshi
-    children: [new TextRun({ text, font: FONT, size: BODY_SIZE, bold: opts.bold })],
+    alignment: AlignmentType.JUSTIFIED,
+    spacing: { after: 160, line: 276 },
+    indent: { firstLine: 567 },
+    children: [new TextRun({ text, font: FONT, size: BODY_SIZE })],
   });
 }
 
 const cellBorders = {
-  top: { style: BorderStyle.SINGLE, size: 4, color: "000000" },
-  bottom: { style: BorderStyle.SINGLE, size: 4, color: "000000" },
-  left: { style: BorderStyle.SINGLE, size: 4, color: "000000" },
-  right: { style: BorderStyle.SINGLE, size: 4, color: "000000" },
+  top: { style: BorderStyle.SINGLE, size: 4, color: "BFDBFE" },
+  bottom: { style: BorderStyle.SINGLE, size: 4, color: "BFDBFE" },
+  left: { style: BorderStyle.SINGLE, size: 4, color: "BFDBFE" },
+  right: { style: BorderStyle.SINGLE, size: 4, color: "BFDBFE" },
 };
 
-function tCell(text: string, opts: { bold?: boolean; align?: (typeof AlignmentType)[keyof typeof AlignmentType]; width?: number } = {}) {
+function headerCell(text: string) {
   return new TableCell({
     borders: cellBorders,
     verticalAlign: VerticalAlign.CENTER,
-    width: opts.width ? { size: opts.width, type: WidthType.PCT } : undefined,
-    margins: { top: 40, bottom: 40, left: 80, right: 80 },
+    shading: { type: ShadingType.CLEAR, color: "auto", fill: ACCENT },
+    margins: { top: 60, bottom: 60, left: 80, right: 80 },
     children: [
       new Paragraph({
-        alignment: opts.align ?? AlignmentType.LEFT,
-        children: [new TextRun({ text, font: FONT, size: 26, bold: opts.bold })],
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text, font: FONT, size: 26, bold: true, color: "FFFFFF" })],
       }),
     ],
   });
 }
 
-function buildCoefficientTable(d: DocxData): Table {
-  const header = new TableRow({
-    tableHeader: true,
+function bodyCell(text: string, opts: { center?: boolean; bold?: boolean; accent?: boolean; zebra?: boolean } = {}) {
+  return new TableCell({
+    borders: cellBorders,
+    verticalAlign: VerticalAlign.CENTER,
+    shading: opts.zebra ? { type: ShadingType.CLEAR, color: "auto", fill: "F8FAFC" } : undefined,
+    margins: { top: 40, bottom: 40, left: 80, right: 80 },
     children: [
-      tCell("Belgi", { bold: true, align: AlignmentType.CENTER, width: 12 }),
-      tCell("Ko'rsatkich", { bold: true, align: AlignmentType.CENTER, width: 63 }),
-      tCell("Qiymat", { bold: true, align: AlignmentType.CENTER, width: 25 }),
+      new Paragraph({
+        alignment: opts.center ? AlignmentType.CENTER : AlignmentType.LEFT,
+        children: [new TextRun({ text, font: FONT, size: 26, bold: opts.bold, color: opts.accent ? ACCENT : "000000" })],
+      }),
     ],
-  });
-
-  const rows: Array<[string, string, string]> = [
-    ["S", "Yer uchastkasining maydoni", `${formatInteger(d.s)} kv. metr`],
-    ["T", `Hudud toifasi (${d.tDescription})`, `${formatInteger(d.t)}`],
-    ["B", "1 kv.metr uchun yuridik shaxslardan olinadigan yer solig'i stavkasi", `${formatInteger(d.b)} so'm`],
-    ["G", "Muhandislik-kommunikatsiya tarmoqlari koeffitsiyenti", formatDecimal(d.g)],
-    ["F", d.fDescription, formatDecimal(d.f)],
-    ["M", "Yer maydoni bo'yicha kamaytiruvchi koeffitsiyent", formatDecimal(d.m)],
-    ["E", "Yer uchastkasiga oid qo'shimcha xarajatlar", `${formatInteger(d.e)} so'm`],
-  ];
-
-  const bodyRows = rows.map(
-    ([belgi, korsatkich, qiymat]) =>
-      new TableRow({
-        children: [
-          tCell(belgi, { bold: true, align: AlignmentType.CENTER }),
-          tCell(korsatkich),
-          tCell(qiymat, { align: AlignmentType.CENTER }),
-        ],
-      })
-  );
-
-  return new Table({
-    width: { size: 100, type: WidthType.PCT },
-    rows: [header, ...bodyRows],
   });
 }
 
-function buildMapParagraphs(d: DocxData, map?: MapImage): Paragraph[] {
+function buildTable(d: DocxData, tr: Tr): Table {
+  const rows: Array<[string, string, string]> = [
+    ["S", tr("Yer uchastkasining maydoni"), `${formatInteger(d.s)} ${tr("kv. metr")}`],
+    ["T", tr(`Hudud toifasi (${d.tDescription})`), `${formatInteger(d.t)}`],
+    ["B", tr("1 kv.metr uchun yuridik shaxslardan olinadigan yer solig'i stavkasi"), `${formatInteger(d.b)} ${tr("so'm")}`],
+    ["G", tr("Muhandislik-kommunikatsiya tarmoqlari koeffitsiyenti"), formatDecimal(d.g)],
+    ["F", tr(d.fDescription), formatDecimal(d.f)],
+    ["M", tr("Yer maydoni bo'yicha kamaytiruvchi koeffitsiyent"), formatDecimal(d.m)],
+    ["E", tr("Yer uchastkasiga oid qo'shimcha xarajatlar"), `${formatInteger(d.e)} ${tr("so'm")}`],
+  ];
+
+  return new Table({
+    width: { size: 100, type: WidthType.PCT },
+    rows: [
+      new TableRow({
+        tableHeader: true,
+        children: [headerCell(tr("Belgi")), headerCell(tr("Ko'rsatkich")), headerCell(tr("Qiymat"))],
+      }),
+      ...rows.map((r, i) =>
+        new TableRow({
+          children: [
+            bodyCell(r[0], { center: true, bold: true, accent: true, zebra: i % 2 === 1 }),
+            bodyCell(r[1], { zebra: i % 2 === 1 }),
+            bodyCell(r[2], { center: true, zebra: i % 2 === 1 }),
+          ],
+        })
+      ),
+    ],
+  });
+}
+
+function buildTextContent(d: DocxData, tr: Tr): (Paragraph | Table)[] {
+  const calc = calculateStartingPrice({ s: d.s, t: d.t, b: d.b, g: d.g, f: d.f, m: d.m, e: d.e });
+
+  return [
+    titleLine(tr(`${d.regionName} ${d.districtName}`.toUpperCase()), BODY_SIZE),
+    titleLine(tr(`${d.mfy.toUpperCase()} HUDUDIDA JOYLASHGAN YER UCHASTKASINI`), BODY_SIZE),
+    titleLine(tr("ELEKTRON ONLAYN-AUKSIONGA CHIQARISH TO'G'RISIDA"), BODY_SIZE),
+    titleLine(tr("MA'LUMOT"), MALUMOT_SIZE, ACCENT),
+    new Paragraph({ children: [new TextRun({ text: "", size: 8 })] }),
+
+    bodyPara(
+      tr(
+        `${d.districtName} hududida ${d.projectPurpose} maqsadida "${d.organization}" davlat muassasasi nomiga belgilangan tartibda davlat ro'yxatidan o'tkazilgan jami ${formatHectare(d.totalAreaHa)} gektar yer maydonidan "${d.projectName}" dam olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan ${formatHectare(d.lotAreaHa)} gektar (${formatInteger(d.lotAreaM2)} kv.metr) yer uchastkasini ijara huquqi asosida elektron onlayn-auksion savdolariga chiqarish yuzasidan boshlang'ich narxning dastlabki hisob-kitoblari amalga oshirildi.`
+      )
+    ),
+    bodyPara(tr(d.legalReference)),
+
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 120, after: 160 },
+      children: [new TextRun({ text: calc.formulaTemplate, bold: true, font: FONT, size: BODY_SIZE, color: ACCENT })],
+    }),
+
+    bodyPara(tr("Mazkur formula bo'yicha hisob-kitob uchun quyidagi ko'rsatkichlar qabul qilindi:")),
+
+    buildTable(d, tr),
+    new Paragraph({ children: [new TextRun({ text: "", size: 8 })] }),
+
+    bodyPara(tr("Yuqoridagi ko'rsatkichlardan kelib chiqib, yer uchastkasining elektron onlayn-auksion savdolaridagi boshlang'ich narxi quyidagicha hisoblanadi:")),
+
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 120, after: 120 },
+      children: [new TextRun({ text: calc.formula, bold: true, font: FONT, size: BODY_SIZE })],
+    }),
+
+    // Narx — oq fon, ko'k matn/ramka; matn 14, son 15 o'lchamda
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 60, after: 120 },
+      border: {
+        top: { style: BorderStyle.SINGLE, size: 4, color: ACCENT },
+        bottom: { style: BorderStyle.SINGLE, size: 4, color: ACCENT },
+        left: { style: BorderStyle.SINGLE, size: 4, color: ACCENT },
+        right: { style: BorderStyle.SINGLE, size: 4, color: ACCENT },
+      },
+      children: [
+        new TextRun({ text: tr("Boshlang'ich narxi "), bold: true, font: FONT, size: 28, color: ACCENT }),
+        new TextRun({ text: formatInteger(d.startingPrice), bold: true, font: FONT, size: 30, color: ACCENT }),
+        new TextRun({ text: tr(" so'mni tashkil etadi."), bold: true, font: FONT, size: 28, color: ACCENT }),
+      ],
+    }),
+
+    // Narx matn (so'z) ko'rinishida
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 160 },
+      children: [
+        new TextRun({
+          text: tr(`(${numberToWordsUz(d.startingPrice)} so'm)`),
+          italics: true,
+          font: FONT,
+          size: 24,
+          color: "334155",
+        }),
+      ],
+    }),
+  ];
+}
+
+function buildMapSection(d: DocxData, tr: Tr, map?: MapImage): Paragraph[] {
   const paras: Paragraph[] = [];
 
-  // Sarlavha
   paras.push(
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { after: 200 },
+      spacing: { after: 160 },
       children: [
         new TextRun({
-          text: `"${d.projectName}" dam olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan ${formatHectare(d.lotAreaHa)} gektar (${formatInteger(d.lotAreaM2)} kv.metr) yer uchastkasi xaritasidan KO'CHIRMASI`,
+          text: tr(`"${d.projectName}" dam olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan ${formatHectare(d.lotAreaHa)} gektar (${formatInteger(d.lotAreaM2)} kv.metr) yer uchastkasi xaritasidan KO'CHIRMASI`),
           bold: true,
           font: FONT,
           size: BODY_SIZE,
@@ -150,69 +235,43 @@ function buildMapParagraphs(d: DocxData, map?: MapImage): Paragraph[] {
     })
   );
 
-  // Rasm
   if (map && map.buffer && map.buffer.length > 0) {
-    const size = getImageSize(map.buffer) ?? { width: 600, height: 750 };
-    const maxW = 600;
+    const size = getImageSize(map.buffer) ?? { width: 1500, height: 1000 };
+    const maxW = 648; // A4 sahifa foydali kengligiga to'liq joylashadi (~17 sm)
     const scale = size.width > maxW ? maxW / size.width : 1;
-    const w = Math.round(size.width * scale);
-    const h = Math.round(size.height * scale);
-    const imgType = map.mime.includes("png") ? "png" : "jpg";
     const imageOptions = {
-      type: imgType,
+      type: map.mime.includes("png") ? "png" : "jpg",
       data: map.buffer,
-      transformation: { width: w, height: h },
+      transformation: { width: Math.round(size.width * scale), height: Math.round(size.height * scale) },
     } as unknown as IImageOptions;
     paras.push(
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 200 },
-        children: [new ImageRun(imageOptions)],
-      })
+      new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 160 }, children: [new ImageRun(imageOptions)] })
     );
   } else {
     paras.push(
       new Paragraph({
         alignment: AlignmentType.CENTER,
-        spacing: { after: 200 },
-        children: [
-          new TextRun({
-            text: "[ Xarita rasmi yuklanmagan ]",
-            italics: true,
-            color: "888888",
-            font: FONT,
-            size: BODY_SIZE,
-          }),
-        ],
+        spacing: { after: 160 },
+        children: [new TextRun({ text: tr("[ Xarita rasmi mavjud emas ]"), italics: true, color: "888888", font: FONT, size: BODY_SIZE })],
       })
     );
   }
 
-  // Legenda — qizil
   paras.push(
     new Paragraph({
       spacing: { after: 100 },
       children: [
-        new TextRun({ text: "— ", bold: true, color: "FF0000", font: FONT, size: BODY_SIZE }),
-        new TextRun({
-          text: `qizil chiziq bilan "${d.organization}"ga davlat ro'yxatidan o'tkazilgan jami ${formatHectare(d.totalAreaHa)} gektar yer maydoni ko'rsatilgan.`,
-          font: FONT,
-          size: BODY_SIZE,
-        }),
+        new TextRun({ text: "— ", bold: true, color: "D32F2F", font: FONT, size: BODY_SIZE }),
+        new TextRun({ text: tr(`qizil chiziq bilan "${d.organization}"ga davlat ro'yxatidan o'tkazilgan jami ${formatHectare(d.totalAreaHa)} gektar yer maydoni ko'rsatilgan.`), font: FONT, size: BODY_SIZE }),
       ],
     })
   );
-  // Legenda — ko'k
   paras.push(
     new Paragraph({
       spacing: { after: 100 },
       children: [
-        new TextRun({ text: "— ", bold: true, color: "0000FF", font: FONT, size: BODY_SIZE }),
-        new TextRun({
-          text: `ko'k chiziq bilan "${d.projectName}" dam olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan ${formatHectare(d.lotAreaHa)} gektar yer maydoni ko'rsatilgan.`,
-          font: FONT,
-          size: BODY_SIZE,
-        }),
+        new TextRun({ text: "— ", bold: true, color: "1E40AF", font: FONT, size: BODY_SIZE }),
+        new TextRun({ text: tr(`ko'k chiziq bilan "${d.projectName}" dam olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan ${formatHectare(d.lotAreaHa)} gektar yer maydoni ko'rsatilgan.`), font: FONT, size: BODY_SIZE }),
       ],
     })
   );
@@ -220,97 +279,50 @@ function buildMapParagraphs(d: DocxData, map?: MapImage): Paragraph[] {
   return paras;
 }
 
+function headerBand(d: DocxData): Paragraph {
+  const parts: string[] = [];
+  if (d.documentNumber) parts.push(d.documentNumber);
+  parts.push(formatDate(new Date()));
+  return new Paragraph({
+    alignment: AlignmentType.RIGHT,
+    spacing: { after: 120 },
+    children: [new TextRun({ text: parts.join("  •  "), font: FONT, size: 20, color: ACCENT })],
+  });
+}
+
 export async function generateDocx(d: DocxData, map?: MapImage): Promise<Buffer> {
-  const calc = calculateStartingPrice({
-    s: d.s, t: d.t, b: d.b, g: d.g, f: d.f, m: d.m, e: d.e,
+  FONT = d.fontFamily && d.fontFamily.trim() ? d.fontFamily.trim() : "Times New Roman";
+  const mode = (d.scriptMode as string) || "LATIN";
+  const identity: Tr = (s) => s;
+  const toCyr: Tr = (s) => latinToCyrillic(s);
+
+  const scripts: Tr[] = mode === "CYRILLIC" ? [toCyr] : mode === "BOTH" ? [identity, toCyr] : [identity];
+
+  const children: (Paragraph | Table)[] = [headerBand(d)];
+
+  scripts.forEach((tr, idx) => {
+    if (idx > 0) children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(...buildTextContent(d, tr));
   });
 
-  const regionUpper = d.regionName.toUpperCase();
-  const districtUpper = d.districtName.toUpperCase();
-  const mfyUpper = d.mfy.toUpperCase();
-
-  const page1: (Paragraph | Table)[] = [
-    // Sarlavha bloki
-    titleLine(`${regionUpper} ${districtUpper}`),
-    titleLine(`${mfyUpper} HUDUDIDA JOYLASHGAN YER UCHASTKASINI`),
-    titleLine("ELEKTRON ONLAYN-AUKSIONGA CHIQARISH TO'G'RISIDA"),
-    titleLine("MA'LUMOT", MALUMOT_SIZE),
-    new Paragraph({ children: [new TextRun({ text: "", font: FONT, size: BODY_SIZE })] }),
-
-    // Kirish
-    bodyPara(
-      `${d.districtName} hududida ${d.projectPurpose} maqsadida "${d.organization}" davlat muassasasi nomiga belgilangan tartibda davlat ro'yxatidan o'tkazilgan jami ${formatHectare(d.totalAreaHa)} gektar yer maydonidan "${d.projectName}" dam olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan ${formatHectare(d.lotAreaHa)} gektar (${formatInteger(d.lotAreaM2)} kv.metr) yer uchastkasini ijara huquqi asosida elektron onlayn-auksion savdolariga chiqarish yuzasidan boshlang'ich narxning dastlabki hisob-kitoblari amalga oshirildi.`,
-      { justify: true }
-    ),
-
-    // Huquqiy asos
-    bodyPara(d.legalReference, { justify: true }),
-
-    // Formula shabloni
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 160 },
-      children: [new TextRun({ text: calc.formulaTemplate, bold: true, font: FONT, size: BODY_SIZE })],
-    }),
-
-    bodyPara("Mazkur formula bo'yicha hisob-kitob uchun quyidagi ko'rsatkichlar qabul qilindi:", { justify: true }),
-
-    // Koeffitsiyentlar jadvali
-    buildCoefficientTable(d),
-    new Paragraph({ children: [new TextRun({ text: "", size: BODY_SIZE })] }),
-
-    bodyPara(
-      "Yuqoridagi ko'rsatkichlardan kelib chiqib, yer uchastkasining elektron onlayn-auksion savdolaridagi boshlang'ich narxi quyidagicha hisoblanadi:",
-      { justify: true }
-    ),
-
-    // Yakuniy hisob
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 120, after: 120 },
-      children: [new TextRun({ text: calc.formula, bold: true, font: FONT, size: BODY_SIZE })],
-    }),
-
-    // Yakuniy narx jumlasi
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 120 },
-      children: [
-        new TextRun({
-          text: `Boshlang'ich narxi ${formatInteger(d.startingPrice)} so'mni tashkil etadi.`,
-          bold: true,
-          font: FONT,
-          size: BODY_SIZE,
-        }),
-      ],
-    }),
-
-    // Sahifa uzilishi
-    new Paragraph({ children: [new PageBreak()] }),
-
-    // 2-sahifa: xarita
-    ...buildMapParagraphs(d, map),
-  ];
+  // Xarita — bir marta, oxirgi skript tilida
+  const lastTr = scripts[scripts.length - 1];
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(...buildMapSection(d, lastTr, map));
 
   const doc = new Document({
     creator: "YerAuksion",
     title: `${d.projectName} — ma'lumotnoma`,
-    styles: {
-      default: {
-        document: {
-          run: { font: FONT, size: BODY_SIZE },
-        },
-      },
-    },
+    styles: { default: { document: { run: { font: FONT, size: BODY_SIZE } } } },
     sections: [
       {
         properties: {
           page: {
-            size: { width: 11906, height: 16838 }, // A4
+            size: { width: 11906, height: 16838 },
             margin: { top: 1020, bottom: 1020, left: 1417, right: 850 },
           },
         },
-        children: page1,
+        children,
       },
     ],
   });

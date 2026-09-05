@@ -22,10 +22,11 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status as Prisma.DocumentWhereInput["status"];
     if (districtId) where.districtId = Number(districtId);
     if (q) {
+      // SQLite: `contains` ASCII uchun katta-kichik harfga sezgir emas; `mode` ishlatilmaydi
       where.OR = [
-        { projectName: { contains: q, mode: "insensitive" } },
-        { documentNumber: { contains: q, mode: "insensitive" } },
-        { mfy: { contains: q, mode: "insensitive" } },
+        { projectName: { contains: q } },
+        { documentNumber: { contains: q } },
+        { mfy: { contains: q } },
       ];
     }
 
@@ -80,6 +81,17 @@ export async function POST(req: NextRequest) {
         tDescription: built.tDescription,
         fDescription: built.fDescription,
         legalReference: built.legalReference,
+        scriptMode: built.scriptMode,
+        fontFamily: built.fontFamily,
+        mapTileType: built.mapTileType,
+        mapCenterLat: built.mapCenterLat,
+        mapCenterLng: built.mapCenterLng,
+        mapZoom: built.mapZoom,
+        mapLineWidth: built.mapLineWidth,
+        labelPositions: built.labelPositions,
+        labelStyle: built.labelStyle,
+        totalGeoJson: built.totalGeoJson,
+        lotGeoJson: built.lotGeoJson,
         status: input.status ?? "DRAFT",
         createdById: session.id,
         calculation: {

@@ -22,6 +22,20 @@ export const documentInputSchema = z.object({
     .number()
     .min(0, { message: "Qo'shimcha xarajatlar manfiy bo'lmasligi kerak" })
     .default(0),
+  scriptMode: z.enum(["LATIN", "CYRILLIC", "BOTH"]).optional().default("LATIN"),
+  fontFamily: z.string().optional().default("Times New Roman"),
+  mapTileType: z
+    .enum(["google_satellite", "google_hybrid", "google_streets", "esri", "osm"])
+    .optional()
+    .default("google_satellite"),
+  mapCenterLat: z.number().nullable().optional(),
+  mapCenterLng: z.number().nullable().optional(),
+  mapZoom: z.number().nullable().optional(),
+  mapLineWidth: z.coerce.number().min(1).max(20).optional().default(3),
+  labelPositions: z.string().optional().nullable(),
+  labelStyle: z.string().optional().nullable(),
+  totalGeoJson: z.string().optional().nullable(),
+  lotGeoJson: z.string().optional().nullable(),
   status: z.enum(["DRAFT", "GENERATED"]).optional().default("DRAFT"),
 });
 

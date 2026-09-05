@@ -1,7 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { formatInteger, formatSom, formatHectare, formatDecimal } from "@/lib/format";
+import { formatInteger, formatHectare, formatDecimal } from "@/lib/format";
+import { latinToCyrillic, type ScriptMode } from "@/lib/translit";
+import { numberToWordsUz } from "@/lib/number-to-words";
+import { type Leader, type LabelStyle } from "@/lib/geo/leader";
+import { GeoMap } from "./geo-map";
 
 export interface PreviewData {
   regionName: string;
@@ -26,116 +30,162 @@ export interface PreviewData {
   legalReference: string;
   formula: string;
   mapUrl?: string | null;
+  scriptMode?: ScriptMode;
+  fontFamily?: string;
+  mapTileType?: string;
+  mapCenterLat?: number | null;
+  mapCenterLng?: number | null;
+  mapZoom?: number | null;
+  mapLineWidth?: number;
+  leaders?: Record<string, Leader>;
+  labelStyle?: LabelStyle;
+  totalGeoJson?: string | null;
+  lotGeoJson?: string | null;
 }
 
+const ACCENT = "#1E40AF";
+
 export function DocumentPreview({ data }: { data: PreviewData }) {
-  const dash = "\u2014";
+  const mode = data.scriptMode ?? "LATIN";
+  const modes: ("LATIN" | "CYRILLIC")[] = mode === "BOTH" ? ["LATIN", "CYRILLIC"] : [mode];
+
   return (
-    <div className="a4-preview">
-      {/* Sarlavha */}
-      <div style={{ textAlign: "center", fontWeight: "bold" }}>
-        <div>
-          {data.regionName.toUpperCase()} {data.districtName.toUpperCase()}
+    <div className="a4-preview" style={{ fontFamily: `"${data.fontFamily || "Times New Roman"}", "Times New Roman", serif` }}>
+      {/* Zamonaviy sarlavha lentasi */}
+      <div style={{ margin: "-48px -56px 24px", padding: "22px 56px 16px", background: `linear-gradient(135deg, ${ACCENT}, #2563eb)`, color: "white" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, opacity: 0.9 }}>
+          <span>YERAUKSION</span>
+          <span>Elektron onlayn-auksion</span>
         </div>
-        <div>{data.mfy.toUpperCase()} HUDUDIDA JOYLASHGAN YER UCHASTKASINI</div>
-        <div>ELEKTRON ONLAYN-AUKSIONGA CHIQARISH TO&apos;G&apos;RISIDA</div>
-        <div style={{ fontSize: 17, marginTop: 6 }}>MA&apos;LUMOT</div>
       </div>
 
-      {/* Kirish */}
-      <p style={{ textAlign: "justify", textIndent: 28, marginTop: 18 }}>
-        {data.districtName} hududida {data.projectPurpose} maqsadida &ldquo;{data.organization}
-        &rdquo; davlat muassasasi nomiga belgilangan tartibda davlat ro&apos;yxatidan o&apos;tkazilgan jami{" "}
-        {formatHectare(data.totalAreaHa)} gektar yer maydonidan &ldquo;{data.projectName}&rdquo; dam
-        olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan{" "}
-        {formatHectare(data.lotAreaHa)} gektar ({formatInteger(data.lotAreaM2)} kv.metr) yer
-        uchastkasini ijara huquqi asosida elektron onlayn-auksion savdolariga chiqarish yuzasidan
-        boshlang&apos;ich narxning dastlabki hisob-kitoblari amalga oshirildi.
-      </p>
-
-      {/* Huquqiy asos */}
-      <p style={{ textAlign: "justify", textIndent: 28 }}>{data.legalReference}</p>
-
-      {/* Formula shabloni */}
-      <p style={{ textAlign: "center", fontWeight: "bold", margin: "12px 0" }}>
-        C = S × T × B × G × F × M + E
-      </p>
-
-      <p style={{ textAlign: "justify", textIndent: 28 }}>
-        Mazkur formula bo&apos;yicha hisob-kitob uchun quyidagi ko&apos;rsatkichlar qabul qilindi:
-      </p>
-
-      {/* Koeffitsiyentlar jadvali */}
-      <table style={{ marginTop: 8 }}>
-        <thead>
-          <tr style={{ fontWeight: "bold", textAlign: "center" }}>
-            <th style={{ width: "12%" }}>Belgi</th>
-            <th style={{ width: "63%" }}>Ko&apos;rsatkich</th>
-            <th style={{ width: "25%" }}>Qiymat</th>
-          </tr>
-        </thead>
-        <tbody>
-          <Row belgi="S" korsatkich="Yer uchastkasining maydoni" qiymat={`${formatInteger(data.s)} kv. metr`} />
-          <Row belgi="T" korsatkich={`Hudud toifasi (${data.tDescription})`} qiymat={formatInteger(data.t)} />
-          <Row belgi="B" korsatkich="1 kv.metr uchun yuridik shaxslardan olinadigan yer solig'i stavkasi" qiymat={`${formatInteger(data.b)} so'm`} />
-          <Row belgi="G" korsatkich="Muhandislik-kommunikatsiya tarmoqlari koeffitsiyenti" qiymat={formatDecimal(data.g)} />
-          <Row belgi="F" korsatkich={data.fDescription} qiymat={formatDecimal(data.f)} />
-          <Row belgi="M" korsatkich="Yer maydoni bo'yicha kamaytiruvchi koeffitsiyent" qiymat={formatDecimal(data.m)} />
-          <Row belgi="E" korsatkich="Yer uchastkasiga oid qo'shimcha xarajatlar" qiymat={`${formatInteger(data.e)} so'm`} />
-        </tbody>
-      </table>
-
-      <p style={{ textAlign: "justify", textIndent: 28, marginTop: 12 }}>
-        Yuqoridagi ko&apos;rsatkichlardan kelib chiqib, yer uchastkasining elektron onlayn-auksion
-        savdolaridagi boshlang&apos;ich narxi quyidagicha hisoblanadi:
-      </p>
-
-      <p style={{ textAlign: "center", fontWeight: "bold", margin: "10px 0" }}>{data.formula}</p>
-      <p style={{ textAlign: "center", fontWeight: "bold" }}>
-        Boshlang&apos;ich narxi {formatInteger(data.startingPrice)} so&apos;mni tashkil etadi.
-      </p>
-
-      {/* 2-sahifa: xarita */}
-      <div style={{ borderTop: "1px dashed #ccc", marginTop: 28, paddingTop: 20 }}>
-        <p style={{ textAlign: "center", fontWeight: "bold" }}>
-          &ldquo;{data.projectName}&rdquo; dam olish maskanini tashkil etish uchun alohida lot
-          sifatida ajratilgan {formatHectare(data.lotAreaHa)} gektar ({formatInteger(data.lotAreaM2)}{" "}
-          kv.metr) yer uchastkasi xaritasidan KO&apos;CHIRMASI
-        </p>
-
-        <div style={{ textAlign: "center", margin: "14px 0" }}>
-          {data.mapUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={data.mapUrl} alt="Xarita" style={{ maxWidth: "100%", maxHeight: 420, border: "1px solid #ddd" }} />
-          ) : (
-            <div style={{ padding: 40, background: "#f8fafc", color: "#94a3b8", border: "1px dashed #cbd5e1" }}>
-              [ Xarita rasmi yuklanmagan ]
+      {modes.map((sm, idx) => (
+        <React.Fragment key={sm}>
+          {idx > 0 && (
+            <div style={{ borderTop: `2px dashed ${ACCENT}`, margin: "28px 0 20px", textAlign: "center", position: "relative" }}>
+              <span style={{ position: "absolute", top: -10, left: "50%", transform: "translateX(-50%)", background: "white", padding: "0 10px", fontSize: 11, color: ACCENT }}>
+                КИРИЛЛ
+              </span>
             </div>
           )}
-        </div>
+          <TextBody data={data} mode={sm} />
+        </React.Fragment>
+      ))}
 
-        <p style={{ marginBottom: 6 }}>
-          <span style={{ color: "#dc2626", fontWeight: "bold" }}>{dash} </span>
-          qizil chiziq bilan &ldquo;{data.organization}&rdquo;ga davlat ro&apos;yxatidan o&apos;tkazilgan
-          jami {formatHectare(data.totalAreaHa)} gektar yer maydoni ko&apos;rsatilgan.
-        </p>
-        <p>
-          <span style={{ color: "#2563eb", fontWeight: "bold" }}>{dash} </span>
-          ko&apos;k chiziq bilan &ldquo;{data.projectName}&rdquo; dam olish maskanini tashkil etish
-          uchun alohida lot sifatida ajratilgan {formatHectare(data.lotAreaHa)} gektar yer maydoni
-          ko&apos;rsatilgan.
-        </p>
+      {/* Xarita bo'limi (bir marta) */}
+      <div style={{ borderTop: "1px solid #e2e8f0", marginTop: 24, paddingTop: 18 }}>
+        {data.totalGeoJson || data.lotGeoJson ? (
+          <GeoMap
+            totalGeoJson={data.totalGeoJson}
+            lotGeoJson={data.lotGeoJson}
+            height={440}
+            tileType={data.mapTileType}
+            center={data.mapCenterLat != null && data.mapCenterLng != null ? [data.mapCenterLat, data.mapCenterLng] : null}
+            zoom={data.mapZoom ?? null}
+            lineWidth={data.mapLineWidth ?? 3}
+            leaders={data.leaders ?? {}}
+            labelStyle={data.labelStyle}
+          />
+        ) : data.mapUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={data.mapUrl} alt="Xarita" style={{ maxWidth: "100%", maxHeight: 420, display: "block", margin: "0 auto", borderRadius: 8, border: "1px solid #e2e8f0" }} />
+        ) : (
+          <div style={{ padding: 40, textAlign: "center", background: "#f8fafc", color: "#94a3b8", borderRadius: 8, border: "1px dashed #cbd5e1" }}>
+            [ Xarita yuklanmagan — SHP/KMZ yoki rasm qo&apos;shing ]
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function Row({ belgi, korsatkich, qiymat }: { belgi: string; korsatkich: string; qiymat: string }) {
+function TextBody({ data, mode }: { data: PreviewData; mode: "LATIN" | "CYRILLIC" }) {
+  const tr = (s: string) => (mode === "CYRILLIC" ? latinToCyrillic(s) : s);
+
+  return (
+    <div>
+      {/* Sarlavha */}
+      <div style={{ textAlign: "center", fontWeight: "bold", color: "#0f172a" }}>
+        <div style={{ fontSize: 15 }}>{tr(`${data.regionName} ${data.districtName}`.toUpperCase())}</div>
+        <div style={{ fontSize: 15 }}>{tr(`${data.mfy.toUpperCase()} HUDUDIDA JOYLASHGAN YER UCHASTKASINI`)}</div>
+        <div style={{ fontSize: 15 }}>{tr("ELEKTRON ONLAYN-AUKSIONGA CHIQARISH TO'G'RISIDA")}</div>
+        <div style={{ fontSize: 18, marginTop: 8, color: ACCENT }}>{tr("MA'LUMOT")}</div>
+      </div>
+
+      <p style={{ textAlign: "justify", textIndent: 28, marginTop: 18 }}>
+        {tr(
+          `${data.districtName} hududida ${data.projectPurpose} maqsadida "${data.organization}" davlat muassasasi nomiga belgilangan tartibda davlat ro'yxatidan o'tkazilgan jami ${formatHectare(data.totalAreaHa)} gektar yer maydonidan "${data.projectName}" dam olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan ${formatHectare(data.lotAreaHa)} gektar (${formatInteger(data.lotAreaM2)} kv.metr) yer uchastkasini ijara huquqi asosida elektron onlayn-auksion savdolariga chiqarish yuzasidan boshlang'ich narxning dastlabki hisob-kitoblari amalga oshirildi.`
+        )}
+      </p>
+
+      <p style={{ textAlign: "justify", textIndent: 28 }}>{tr(data.legalReference)}</p>
+
+      <p style={{ textAlign: "center", fontWeight: "bold", margin: "12px 0", color: ACCENT }}>
+        C = S × T × B × G × F × M + E
+      </p>
+
+      <p style={{ textAlign: "justify", textIndent: 28 }}>
+        {tr("Mazkur formula bo'yicha hisob-kitob uchun quyidagi ko'rsatkichlar qabul qilindi:")}
+      </p>
+
+      <table style={{ marginTop: 8 }}>
+        <thead>
+          <tr style={{ background: ACCENT, color: "white", fontWeight: "bold", textAlign: "center" }}>
+            <th style={{ width: "12%", border: "1px solid " + ACCENT }}>{tr("Belgi")}</th>
+            <th style={{ width: "63%", border: "1px solid " + ACCENT }}>{tr("Ko'rsatkich")}</th>
+            <th style={{ width: "25%", border: "1px solid " + ACCENT }}>{tr("Qiymat")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <Row belgi="S" k={tr("Yer uchastkasining maydoni")} v={`${formatInteger(data.s)} ${tr("kv. metr")}`} />
+          <Row belgi="T" k={tr(`Hudud toifasi (${data.tDescription})`)} v={formatInteger(data.t)} />
+          <Row belgi="B" k={tr("1 kv.metr uchun yuridik shaxslardan olinadigan yer solig'i stavkasi")} v={`${formatInteger(data.b)} ${tr("so'm")}`} />
+          <Row belgi="G" k={tr("Muhandislik-kommunikatsiya tarmoqlari koeffitsiyenti")} v={formatDecimal(data.g)} />
+          <Row belgi="F" k={tr(data.fDescription)} v={formatDecimal(data.f)} />
+          <Row belgi="M" k={tr("Yer maydoni bo'yicha kamaytiruvchi koeffitsiyent")} v={formatDecimal(data.m)} />
+          <Row belgi="E" k={tr("Yer uchastkasiga oid qo'shimcha xarajatlar")} v={`${formatInteger(data.e)} ${tr("so'm")}`} />
+        </tbody>
+      </table>
+
+      <p style={{ textAlign: "justify", textIndent: 28, marginTop: 12 }}>
+        {tr("Yuqoridagi ko'rsatkichlardan kelib chiqib, yer uchastkasining elektron onlayn-auksion savdolaridagi boshlang'ich narxi quyidagicha hisoblanadi:")}
+      </p>
+
+      <p style={{ textAlign: "center", fontWeight: "bold", margin: "10px 0" }}>{tr(data.formula)}</p>
+
+      <div style={{ textAlign: "center", margin: "12px 0" }}>
+        <div style={{ border: "2px solid #1E40AF", background: "#fff", padding: "8px 14px", fontWeight: "bold", color: "#1E40AF" }}>
+          <span style={{ fontSize: 14 }}>{tr("Boshlang'ich narxi ")}</span>
+          <span style={{ fontSize: 16 }}>{formatInteger(data.startingPrice)}</span>
+          <span style={{ fontSize: 14 }}>{tr(" so'mni tashkil etadi.")}</span>
+        </div>
+        <p style={{ fontStyle: "italic", color: "#475569", marginTop: 6, fontSize: 13 }}>
+          {tr(`(${numberToWordsUz(data.startingPrice)} so'm)`)}
+        </p>
+      </div>
+
+      {/* Xarita sarlavhasi va legenda (matn) */}
+      <p style={{ textAlign: "center", fontWeight: "bold", marginTop: 18 }}>
+        {tr(`"${data.projectName}" dam olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan ${formatHectare(data.lotAreaHa)} gektar (${formatInteger(data.lotAreaM2)} kv.metr) yer uchastkasi xaritasidan KO'CHIRMASI`)}
+      </p>
+      <p style={{ marginTop: 8 }}>
+        <span style={{ color: "#dc2626", fontWeight: "bold" }}>— </span>
+        {tr(`qizil chiziq bilan "${data.organization}"ga davlat ro'yxatidan o'tkazilgan jami ${formatHectare(data.totalAreaHa)} gektar yer maydoni ko'rsatilgan.`)}
+      </p>
+      <p>
+        <span style={{ color: "#2563eb", fontWeight: "bold" }}>— </span>
+        {tr(`ko'k chiziq bilan "${data.projectName}" dam olish maskanini tashkil etish uchun alohida lot sifatida ajratilgan ${formatHectare(data.lotAreaHa)} gektar yer maydoni ko'rsatilgan.`)}
+      </p>
+    </div>
+  );
+}
+
+function Row({ belgi, k, v }: { belgi: string; k: string; v: string }) {
   return (
     <tr>
-      <td style={{ textAlign: "center", fontWeight: "bold" }}>{belgi}</td>
-      <td>{korsatkich}</td>
-      <td style={{ textAlign: "center" }}>{qiymat}</td>
+      <td style={{ textAlign: "center", fontWeight: "bold", color: ACCENT }}>{belgi}</td>
+      <td>{k}</td>
+      <td style={{ textAlign: "center" }}>{v}</td>
     </tr>
   );
 }

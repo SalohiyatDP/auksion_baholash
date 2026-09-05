@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Save, FileText, Eye, EyeOff, Calculator, MapPin, Layers, Coins, Building2 } from "lucide-react";
+import { Save, FileText, Eye, EyeOff, Calculator, MapPin, Layers, Coins, Building2, Languages } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { MapUpload } from "./map-upload";
+import { GeoItems } from "./geo-items";
+import { GeoMap } from "./geo-map";
 import { DocumentPreview, type PreviewData } from "./document-preview";
 import { apiFetch } from "@/lib/client";
 import { formatHectare, formatSom } from "@/lib/format";
+import { SCRIPT_LABELS, type ScriptMode } from "@/lib/translit";
+import { parseLeaders, parseStyle, type Leader, type LabelStyle } from "@/lib/geo/leader";
 
 interface Option { id: number; name: string }
 interface UsageOption { id: number; code: string; name: string; coefficientF: number }
@@ -32,7 +36,37 @@ export interface DocumentFormInitial {
   g?: number;
   e?: number;
   hasMap?: boolean;
+  scriptMode?: string;
+  fontFamily?: string;
+  mapTileType?: string;
+  mapCenterLat?: number | null;
+  mapCenterLng?: number | null;
+  mapZoom?: number | null;
+  mapLineWidth?: number;
+  labelPositions?: string | null;
+  labelStyle?: string | null;
+  totalGeoJson?: string | null;
+  lotGeoJson?: string | null;
 }
+
+const TILE_OPTIONS = [
+  { value: "google_satellite", label: "Google sun'iy yo'ldosh" },
+  { value: "google_hybrid", label: "Google gibrid" },
+  { value: "esri", label: "Sun'iy yo'ldosh (Esri)" },
+  { value: "google_streets", label: "Google ko'cha" },
+  { value: "osm", label: "Ko'cha xaritasi (OSM)" },
+];
+
+const FONT_OPTIONS = [
+  "Times New Roman",
+  "Arial",
+  "Cambria",
+  "Georgia",
+  "PT Astra Serif",
+  "Verdana",
+  "Tahoma",
+  "Calibri",
+];
 
 interface CalcResponse {
   coefficients: {
@@ -54,6 +88,8 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
   const [usages, setUsages] = React.useState<UsageOption[]>([]);
   const [engineering, setEngineering] = React.useState<EngOption[]>([]);
   const [legalText, setLegalText] = React.useState("");
+  const [organizations, setOrganizations] = React.useState<{ id: number; name: string }[]>([]);
+  const [purposes, setPurposes] = React.useState<{ id: number; name: string }[]>([]);
 
   // Forma qiymatlari
   const [regionId, setRegionId] = React.useState<string>(initial?.regionId ? String(initial.regionId) : "");
@@ -69,6 +105,22 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
   const [landUsageCode, setLandUsageCode] = React.useState(initial?.landUsageCode ?? "");
   const [g, setG] = React.useState(initial?.g != null ? String(initial.g) : "1.0");
   const [e, setE] = React.useState(initial?.e != null ? String(initial.e) : "0");
+
+  const [scriptMode, setScriptMode] = React.useState<ScriptMode>((initial?.scriptMode as ScriptMode) ?? "LATIN");
+  const [fontFamily, setFontFamily] = React.useState(initial?.fontFamily ?? "Times New Roman");
+  const [mapTileType, setMapTileType] = React.useState(initial?.mapTileType ?? "google_satellite");
+  const [mapLineWidth, setMapLineWidth] = React.useState(String(initial?.mapLineWidth ?? 3));
+  const [mapView, setMapView] = React.useState<{ center: [number, number] | null; zoom: number | null }>({
+    center:
+      initial?.mapCenterLat != null && initial?.mapCenterLng != null
+        ? [initial.mapCenterLat, initial.mapCenterLng]
+        : null,
+    zoom: initial?.mapZoom ?? null,
+  });
+  const [leaders, setLeaders] = React.useState<Record<string, Leader>>(() => parseLeaders(initial?.labelPositions));
+  const [labelStyle, setLabelStyle] = React.useState<LabelStyle>(() => parseStyle(initial?.labelStyle));
+  const [totalGeoJson, setTotalGeoJson] = React.useState<string | null>(initial?.totalGeoJson ?? null);
+  const [lotGeoJson, setLotGeoJson] = React.useState<string | null>(initial?.lotGeoJson ?? null);
 
   const [mapFile, setMapFile] = React.useState<File | null>(null);
   const [mapPreview, setMapPreview] = React.useState<string | null>(
@@ -87,12 +139,20 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
       try {
         const [r, c] = await Promise.all([
           apiFetch<{ regions: Option[] }>("/api/regions"),
-          apiFetch<{ landUsage: UsageOption[]; engineering: EngOption[]; legal: { body: string }[] }>("/api/coefficients"),
+          apiFetch<{
+            landUsage: UsageOption[];
+            engineering: EngOption[];
+            legal: { body: string }[];
+            organizations: { id: number; name: string }[];
+            purposes: { id: number; name: string }[];
+          }>("/api/coefficients"),
         ]);
         setRegions(r.regions);
         setUsages(c.landUsage);
         setEngineering(c.engineering);
         setLegalText(c.legal[0]?.body ?? "");
+        setOrganizations(c.organizations ?? []);
+        setPurposes(c.purposes ?? []);
         if (r.regions.length === 1 && !regionId) setRegionId(String(r.regions[0].id));
       } catch (err) {
         error(err instanceof Error ? err.message : "Ma'lumotlarni yuklashda xatolik");
@@ -180,6 +240,17 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         legalReference: legalText,
         formula: calc.result.formula,
         mapUrl: mapPreview,
+        scriptMode,
+        fontFamily,
+        mapTileType,
+        mapCenterLat: mapView.center?.[0] ?? null,
+        mapCenterLng: mapView.center?.[1] ?? null,
+        mapZoom: mapView.zoom,
+        mapLineWidth: Number(mapLineWidth),
+        leaders,
+        labelStyle,
+        totalGeoJson,
+        lotGeoJson,
       }
     : null;
 
@@ -213,6 +284,17 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
         landUsageCode,
         g: Number(g),
         e: Number(e || 0),
+        scriptMode,
+        fontFamily,
+        mapTileType,
+        mapCenterLat: mapView.center?.[0] ?? null,
+        mapCenterLng: mapView.center?.[1] ?? null,
+        mapZoom: mapView.zoom,
+        mapLineWidth: Number(mapLineWidth),
+        labelPositions: JSON.stringify(leaders),
+        labelStyle: JSON.stringify(labelStyle),
+        totalGeoJson,
+        lotGeoJson,
         status: action === "generate" ? "GENERATED" : "DRAFT",
       };
 
@@ -284,8 +366,11 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
                 {mfys.map((m) => <option key={m.id} value={m.name} />)}
               </datalist>
             </Field>
-            <Field label="Balansdagi tashkilot">
-              <Input value={organization} onChange={(e) => setOrganization(e.target.value)} placeholder="Namangan turistik-rekreatsion ... direksiyasi" />
+            <Field label="Balansda saqlovchi tashkilot">
+              <Input list="org-list" value={organization} onChange={(e) => setOrganization(e.target.value)} placeholder="Namangan turistik-rekreatsion ... direksiyasi" />
+              <datalist id="org-list">
+                {organizations.map((o) => <option key={o.id} value={o.name} />)}
+              </datalist>
             </Field>
           </CardContent>
         </Card>
@@ -302,7 +387,10 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
               <Input value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="Sharshara-1" />
             </Field>
             <Field label="Loyiha maqsadi">
-              <Input value={projectPurpose} onChange={(e) => setProjectPurpose(e.target.value)} />
+              <Input list="purpose-list" value={projectPurpose} onChange={(e) => setProjectPurpose(e.target.value)} />
+              <datalist id="purpose-list">
+                {purposes.map((p) => <option key={p.id} value={p.name} />)}
+              </datalist>
             </Field>
             <Field label="Jami ro'yxatdan o'tgan maydon (gektar) *">
               <Input type="number" step="0.01" min="0" value={totalAreaHa} onChange={(e) => setTotalAreaHa(e.target.value)} placeholder="4.92" />
@@ -349,22 +437,120 @@ export function DocumentForm({ initial }: { initial?: DocumentFormInitial }) {
           </CardContent>
         </Card>
 
-        {/* Xarita */}
+        {/* Hujjat ko'rinishi: alifbo va shrift */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Building2 className="h-4 w-4 text-primary" /> Xarita ko&apos;chirmasi
+              <Languages className="h-4 w-4 text-primary" /> Hujjat ko&apos;rinishi
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <MapUpload
-              previewUrl={mapPreview}
-              onSelect={(f) => {
-                setMapFile(f);
-                if (!f) { setMapPreview(null); setRemoveMap(true); }
-                else setRemoveMap(false);
-              }}
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Alifbo</Label>
+              <div className="mt-1.5 flex flex-wrap gap-2">
+                {(["LATIN", "CYRILLIC", "BOTH"] as ScriptMode[]).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setScriptMode(m)}
+                    className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                      scriptMode === m ? "border-primary bg-primary text-primary-foreground" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {SCRIPT_LABELS[m]}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Field label="Shrift (Word hujjati uchun)">
+              <Select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)}>
+                {FONT_OPTIONS.map((f) => <option key={f} value={f}>{f}</option>)}
+              </Select>
+              <p className="mt-1 text-xs text-slate-400" style={{ fontFamily }}>
+                Namuna: Boshlang&apos;ich narx 651 537 810 so&apos;m
+              </p>
+            </Field>
+          </CardContent>
+        </Card>
+
+        {/* Xarita: SHP/KMZ + Google */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Building2 className="h-4 w-4 text-primary" /> Xarita (SHP / KMZ)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <GeoItems label="Umumiy maydon" color="red" initialFC={initial?.totalGeoJson ?? null} onChange={setTotalGeoJson} />
+              <GeoItems label="Lotlar" color="blue" initialFC={initial?.lotGeoJson ?? null} onChange={setLotGeoJson} />
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Xarita turi (preview va Word uchun)">
+                <Select value={mapTileType} onChange={(e) => setMapTileType(e.target.value)}>
+                  {TILE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </Select>
+              </Field>
+              <Field label={`Poligon chizig'i: ${mapLineWidth} px`}>
+                <input
+                  type="range"
+                  min={1}
+                  max={10}
+                  step={1}
+                  value={mapLineWidth}
+                  onChange={(e) => setMapLineWidth(e.target.value)}
+                  className="mt-2 w-full accent-primary"
+                />
+              </Field>
+            </div>
+
+            {/* Gektar leader-chizmasi uslubi */}
+            <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3 sm:grid-cols-4">
+              <Field label="Chiziq rangi">
+                <input type="color" value={labelStyle.lineColor} onChange={(e) => setLabelStyle((s) => ({ ...s, lineColor: e.target.value }))} className="h-9 w-full cursor-pointer rounded border" />
+              </Field>
+              <Field label={`Chiziq qalinligi: ${labelStyle.lineWidth}`}>
+                <input type="range" min={1} max={8} step={1} value={labelStyle.lineWidth} onChange={(e) => setLabelStyle((s) => ({ ...s, lineWidth: Number(e.target.value) }))} className="mt-2 w-full accent-primary" />
+              </Field>
+              <Field label="Gektar rangi">
+                <input type="color" value={labelStyle.textColor} onChange={(e) => setLabelStyle((s) => ({ ...s, textColor: e.target.value }))} className="h-9 w-full cursor-pointer rounded border" />
+              </Field>
+              <Field label={`Gektar o'lchami: ${labelStyle.textSize}`}>
+                <input type="range" min={10} max={40} step={1} value={labelStyle.textSize} onChange={(e) => setLabelStyle((s) => ({ ...s, textSize: Number(e.target.value) }))} className="mt-2 w-full accent-primary" />
+              </Field>
+            </div>
+            <GeoMap
+              totalGeoJson={totalGeoJson}
+              lotGeoJson={lotGeoJson}
+              height={360}
+              tileType={mapTileType}
+              center={mapView.center}
+              zoom={mapView.zoom}
+              lineWidth={Number(mapLineWidth)}
+              leaders={leaders}
+              labelStyle={labelStyle}
+              onViewChange={(center, zoom) => setMapView({ center, zoom })}
+              onLeaderChange={(fid, leader) => setLeaders((p) => ({ ...p, [fid]: leader }))}
             />
+            <p className="text-xs text-slate-400">
+              Xaritani surib/masshtablab kerakli ko&apos;rinishga keltiring — aynan shu ko&apos;rinish (qatlam va masshtab) Word hujjatiga joylanadi.
+            </p>
+
+            <details className="rounded-lg border border-slate-200 p-3">
+              <summary className="cursor-pointer text-sm text-slate-500">
+                Yoki tayyor xarita rasmini yuklash (JPG/PNG)
+              </summary>
+              <div className="mt-3">
+                <MapUpload
+                  previewUrl={mapPreview}
+                  onSelect={(f) => {
+                    setMapFile(f);
+                    if (!f) { setMapPreview(null); setRemoveMap(true); }
+                    else setRemoveMap(false);
+                  }}
+                />
+              </div>
+            </details>
           </CardContent>
         </Card>
       </div>

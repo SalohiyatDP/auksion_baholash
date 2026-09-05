@@ -71,3 +71,36 @@ body {
   padding: 6px 8px;
   vertical-align: middle;
 }
+
+
+/* Xaritadagi maydon (gektar) yorliqlari */
+.leaflet-tooltip.area-label {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 3px #000;
+}
+.leaflet-tooltip.area-label::before {
+  display: none;
+}
+
+
+/* Ushlab siljitiladigan gektar yorlig'i (marker) */
+.area-label-wrap {
+  background: transparent !important;
+  border: none !important;
+}
+.area-label-badge {
+  display: inline-block;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 3px #000;
+  cursor: move;
+  user-select: none;
+}

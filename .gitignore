@@ -28,8 +28,13 @@ yarn-error.log*
 /storage/*
 !/storage/.gitkeep
 
-# prisma
+# SQLite baza fayllari
+/data/*
+!/data/.gitkeep
 /prisma/*.db
+/prisma/*.db-journal
+*.db
+*.db-journal
 
 # typescript
 *.tsbuildinfo

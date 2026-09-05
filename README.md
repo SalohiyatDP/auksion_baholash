@@ -21,9 +21,8 @@ docker compose up --build
 
 So'ng brauzerda oching: **http://localhost:3000**
 
-Konteynerlar:
-- `yerauksion-db` — PostgreSQL 16
-- `yerauksion-app` — Next.js ilovasi (avtomatik: sxema qo'llash + seed + start)
+Konteyner:
+- `yerauksion-app` — Next.js + **SQLite** (avtomatik: sxema qo'llash + seed + start). Alohida DB serveri kerak emas.
 
 To'xtatish:
 ```bash
@@ -82,7 +81,7 @@ qiladi (M = 0,9)** va to'g'ri natijani beradi. Batafsil: `PLAN.md`, 7-bo'lim.
 
 - **Frontend:** Next.js 15 (App Router), TypeScript, React 19, Tailwind CSS, shadcn uslubidagi komponentlar, Lucide
 - **Backend:** Next.js API Routes (modulli servis qatlami)
-- **DB:** PostgreSQL + Prisma ORM
+- **DB:** SQLite + Prisma ORM (fayl asosidagi baza — server/kredentsial talab qilinmaydi)
 - **Hujjat:** [`docx`](https://www.npmjs.com/package/docx) — haqiqiy `.docx` (A4, Times New Roman, jadval, xarita rasmi)
 - **Auth:** JWT (httpOnly cookie) + rol asosida (RBAC)
 - **Fayl saqlash:** lokal disk (`StorageProvider` abstraktsiyasi orqali kelajakda S3 ga o'tish mumkin)
@@ -135,12 +134,12 @@ Qatlamlar ajratilgan: **UI / biznes-mantiq / DB / hujjat generatsiyasi / hisobla
 
 ## 💻 Lokal ishga tushirish (Docker'siz)
 
-Talab: Node.js 20+, PostgreSQL 14+.
+Talab: Node.js 20+ (alohida ma'lumotlar bazasi serveri **kerak emas** — SQLite).
 
 ```bash
-cp .env.example .env          # va DATABASE_URL ni sozlang
+cp .env.example .env          # standart DATABASE_URL SQLite (data/app.db)
 npm install
-npx prisma db push            # sxemani yaratadi
+npx prisma db push            # data/app.db bazasini yaratadi
 npx prisma db seed            # boshlang'ich ma'lumotlar
 npm run dev                   # http://localhost:3000
 ```
@@ -160,10 +159,49 @@ hujjatlarning hisob-kitobi o'zgarmaydi.
 
 ---
 
-## 🚧 v1 cheklovlari va keyingi bosqichlar
+## 🌐 Ishlab chiqarishga joylash (Deployment)
 
-- Koeffitsiyentlar sahifasi hozircha **ko'rish** rejimida; to'liq UI-CRUD keyingi versiyada (hozir seed/baza orqali).
-- Kelajakda ko'zda tutilgan (arxitektura tayyor): PDF eksport, GIS (SHP/KML/GeoJSON), ERI (elektron raqamli imzo), ko'p viloyat/shablon.
+`narx.namresort.uz` kabi domenga joylash — Caddy orqali avtomatik HTTPS bilan:
+```bash
+cp .env.prod.example .env   # qiymatlarni to'ldiring
+docker compose -f docker-compose.prod.yml up -d --build
+```
+To'liq bosqichma-bosqich qo'llanma:
+- **Docker'li server (VPS):** [`DEPLOY.md`](./DEPLOY.md)
+- **Umumiy hosting (ISPmanager, Docker'siz):** [`DEPLOY_HOSTING.md`](./DEPLOY_HOSTING.md)
+
+## 🗺 Xarita: SHP / KMZ / KML / GeoJSON (KALITSIZ)
+
+Hujjat formasida ikkita geografik yuklash mavjud:
+- **Umumiy maydon** — xaritada **qizil** chiziq bilan
+- **Lotlar** — xaritada **ko'k** chiziq bilan
+
+Qo'llab-quvvatlanadigan formatlar: **SHP** (`.zip` shaklida), **KMZ**, **KML**, **GeoJSON**. Fayllar
+brauzerda GeoJSON ga o'giriladi.
+
+**Xarita hech qanday API kalit talab qilmaydi.** Ochiq manbalar ishlatiladi:
+- **Interaktiv xarita:** [Leaflet](https://leafletjs.com) + OpenStreetMap / Esri sun'iy yo'ldosh /
+  Google tayllar (qatlamni almashtirish mumkin).
+- **Hujjatdagi rasm (.docx):** [`staticmaps`](https://www.npmjs.com/package/staticmaps) kutubxonasi
+  serverda tayllarni yig'ib, qizil/ko'k poligonli PNG rasm shakllantiradi.
+
+> Ya'ni faqat internet ulanishi bo'lsa kifoya — kalit sozlash shart emas.
+
+## 🔤 Alifbo (Lotin / Kirill)
+
+Har bir hujjat uchun alifbo tanlanadi: **Lotin**, **Kirill** yoki **Ikkalasi**. Tanlov ham web
+ko'rinishga, ham generatsiya qilingan `.docx` ga ta'sir qiladi. "Ikkalasi" tanlanganda hujjat lotin
+va kirill matnlarini ketma-ket ko'rsatadi.
+
+## ⚙️ Koeffitsiyentlarni tahrirlash
+
+Administrator **Sozlamalar** bo'limida barcha koeffitsiyent jadvallarini (T, B, F, M, G) va huquqiy
+asosni to'g'ridan-to'g'ri qo'shishi, tahrirlashi va o'chirishi mumkin. O'zgarishlar faqat yangi
+hujjatlarga ta'sir qiladi (snapshot tufayli eski hujjatlar o'zgarmaydi).
+
+## 🚧 Keyingi bosqichlar
+
+- Kelajakda ko'zda tutilgan (arxitektura tayyor): PDF eksport, ERI (elektron raqamli imzo), ko'p viloyat/shablon.
 - Docker image demo uchun `prisma db push` ishlatadi; ishlab chiqarishda `prisma migrate` bilan migratsiya fayllari yaratish tavsiya etiladi.
 
 ---

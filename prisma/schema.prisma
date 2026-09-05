@@ -1,29 +1,18 @@
 // YerAuksion — Ma'lumotlar bazasi sxemasi
-// PostgreSQL + Prisma
+// SQLite + Prisma (fayl asosidagi baza — server/kredentsial talab qilinmaydi)
+//
+// Eslatma: SQLite enum'ni qo'llamaydi, shuning uchun role/status/type maydonlari String.
+//   role:   ADMIN | OPERATOR
+//   status: DRAFT | GENERATED | ARCHIVED
+//   type:   MAP_IMAGE | GENERATED_DOCX | TOTAL_GEO | LOT_GEO | STATIC_MAP
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum Role {
-  ADMIN
-  OPERATOR
-}
-
-enum DocumentStatus {
-  DRAFT
-  GENERATED
-  ARCHIVED
-}
-
-enum FileType {
-  MAP_IMAGE
-  GENERATED_DOCX
 }
 
 model User {
@@ -32,7 +21,7 @@ model User {
   email        String     @unique
   username     String     @unique
   passwordHash String
-  role         Role       @default(OPERATOR)
+  role         String     @default("OPERATOR")
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
@@ -207,7 +196,33 @@ model Document {
   // Huquqiy asos matni — snapshot
   legalReference String         @default("")
 
-  status         DocumentStatus @default(DRAFT)
+  // Yozuv alifbosi: LATIN | CYRILLIC | BOTH
+  scriptMode     String         @default("LATIN")
+
+  // Hujjat shrifti (Word va preview uchun)
+  fontFamily     String         @default("Times New Roman")
+
+  // Geografik ma'lumot (GeoJSON matn ko'rinishida) — SHP/KMZ/KML dan olingan
+  totalGeoJson   String?        // umumiy maydon (qizil chiziq)
+  lotGeoJson     String?        // lotlar (ko'k chiziq)
+
+  // Xarita qatlami turi: google_satellite | google_hybrid | google_streets | esri | osm
+  mapTileType    String         @default("google_satellite")
+
+  // Xarita ko'rinishi (preview'dan saqlangan markaz va masshtab)
+  mapCenterLat   Float?
+  mapCenterLng   Float?
+  mapZoom        Float?
+
+  // Chizma (poligon) chiziq qalinligi
+  mapLineWidth   Float          @default(3)
+
+  // Gektar yorliqlari leader joylashuvi (JSON: { "<fid>": { tip, bend, top } })
+  labelPositions String?
+  // Yorliq uslubi (JSON: { lineColor, lineWidth, textColor, textSize })
+  labelStyle     String?
+
+  status         String         @default("DRAFT")
 
   createdById    String
   createdBy      User           @relation(fields: [createdById], references: [id])
@@ -238,7 +253,7 @@ model DocumentFile {
   id           String   @id @default(cuid())
   documentId   String
   document     Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  type         FileType
+  type         String
   path         String
   originalName String
   size         Int
@@ -247,4 +262,26 @@ model DocumentFile {
 
   @@index([documentId, type])
   @@map("document_files")
+}
+
+
+
+// Balansda saqlovchi tashkilotlar (formada tanlash uchun)
+model Organization {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+// Loyiha maqsadlari (formada tanlash uchun)
+model ProjectPurpose {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_purposes")
 }

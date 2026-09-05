@@ -7,6 +7,7 @@ import { DocumentPreview, type PreviewData } from "@/components/documents/docume
 import { DocumentActions } from "@/components/documents/document-actions";
 import { calculateStartingPrice } from "@/services/calculation";
 import { formatDate } from "@/lib/format";
+import { parseLeaders, parseStyle } from "@/lib/geo/leader";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,17 @@ export default async function DocumentViewPage({
     legalReference: doc.legalReference,
     formula,
     mapUrl: hasMap ? `/api/documents/${doc.id}/map` : null,
+    scriptMode: doc.scriptMode as "LATIN" | "CYRILLIC" | "BOTH",
+    fontFamily: doc.fontFamily,
+    mapTileType: doc.mapTileType,
+    mapCenterLat: doc.mapCenterLat,
+    mapCenterLng: doc.mapCenterLng,
+    mapZoom: doc.mapZoom,
+    mapLineWidth: doc.mapLineWidth,
+    leaders: parseLeaders(doc.labelPositions),
+    labelStyle: parseStyle(doc.labelStyle),
+    totalGeoJson: doc.totalGeoJson,
+    lotGeoJson: doc.lotGeoJson,
   };
 
   return (

@@ -1,17 +1,41 @@
 import { cookies } from "next/headers";
 import type { SessionUser, Role } from "@/types";
 import { signSession, verifySession, SESSION_COOKIE } from "@/lib/jwt";
+import { prisma } from "@/lib/prisma";
 
 export { SESSION_COOKIE, verifySession, signSession };
 
 const MAX_AGE = 60 * 60 * 24 * 7; // 7 kun
 
-/** Server komponent / route handler ichida joriy sessiyani oladi */
+/**
+ * Server komponent / route handler ichida joriy sessiyani oladi.
+ * Cookie'dagi ma'lumotni baza bilan tekshiradi va HAQIQIY foydalanuvchi id sini qaytaradi
+ * (baza qayta seed qilinib, cookie eskirsa — email bo'yicha topadi). Bu `createdById`
+ * kabi foreign key xatolarini oldini oladi.
+ */
 export async function getSession(): Promise<SessionUser | null> {
   const store = await cookies();
   const token = store.get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifySession(token);
+  const decoded = await verifySession(token);
+  if (!decoded) return null;
+  try {
+    let user = await prisma.user.findUnique({ where: { id: decoded.id } });
+    if (!user && decoded.email) {
+      user = await prisma.user.findUnique({ where: { email: decoded.email } });
+    }
+    if (!user || !user.isActive) return null;
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      username: user.username,
+      role: user.role,
+    };
+  } catch {
+    // Baza bilan bog'lanishda muammo bo'lsa — token ma'lumotidan foydalanamiz
+    return decoded;
+  }
 }
 
 export async function setSession(user: SessionUser): Promise<void> {

@@ -48,6 +48,17 @@ export default async function EditDocumentPage({
           g: doc.g,
           e: doc.e,
           hasMap,
+          scriptMode: doc.scriptMode,
+          fontFamily: doc.fontFamily,
+          mapTileType: doc.mapTileType,
+          mapCenterLat: doc.mapCenterLat,
+          mapCenterLng: doc.mapCenterLng,
+          mapZoom: doc.mapZoom,
+          mapLineWidth: doc.mapLineWidth,
+          labelPositions: doc.labelPositions,
+          labelStyle: doc.labelStyle,
+          totalGeoJson: doc.totalGeoJson,
+          lotGeoJson: doc.lotGeoJson,
         }}
       />
     </div>

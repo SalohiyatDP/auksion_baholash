@@ -1,0 +1,48 @@
+# ============================================================
+# YerAuksion — Docker'li server (VPS) uchun production tarkibi
+# Caddy (avtomatik HTTPS) + Next.js (SQLite). Alohida DB serveri kerak emas.
+# Ishga tushirish:  docker compose -f docker-compose.prod.yml up -d --build
+# ============================================================
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yerauksion-app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "file:/app/data/app.db"
+      JWT_SECRET: ${JWT_SECRET}
+      STORAGE_DIR: "/app/storage"
+      PORT: "3000"
+      NEXT_PUBLIC_APP_URL: "https://narx.namresort.uz"
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
+      SEED_OPERATOR_EMAIL: ${SEED_OPERATOR_EMAIL}
+      SEED_OPERATOR_PASSWORD: ${SEED_OPERATOR_PASSWORD}
+      NODE_ENV: "production"
+    expose:
+      - "3000"
+    volumes:
+      - dbdata:/app/data
+      - storage:/app/storage
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: yerauksion-caddy
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  dbdata:
+  storage:
+  caddy_data:
+  caddy_config:

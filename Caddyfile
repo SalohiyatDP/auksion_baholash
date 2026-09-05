@@ -1,0 +1,16 @@
+# YerAuksion — Caddy reverse proxy (avtomatik Let's Encrypt HTTPS)
+# Global sozlama: ACME xabarnomalari uchun email (o'zingiznikiga o'zgartiring)
+{
+	email admin@namresort.uz
+}
+
+narx.namresort.uz {
+	encode zstd gzip
+
+	# Xarita (SHP/KMZ) va rasm yuklashlar uchun katta hajmga ruxsat
+	request_body {
+		max_size 30MB
+	}
+
+	reverse_proxy app:3000
+}
